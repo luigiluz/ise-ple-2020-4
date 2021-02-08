@@ -13,8 +13,13 @@
 #include "esp_system.h"
 
 #include "keypad.h"
+#include "display.h"
 
 static const char *TAG = "KEYPAD";
+
+#define KEYPAD_DISPLAY_MSG_CURSOR_ROW		0
+#define KEYPAD_DISPLAY_MSG_CURSOR_COL		12
+#define KEYPAD_DISPLAY_MSG_LEN				4
 
 #define TEST_ONE_SHOT       false
 #define TEST_RELOAD         true
@@ -213,6 +218,12 @@ char get_key_from_keypad(char read_columns[KEYPAD_COLS])
 
 void keypad_task(void *pvParameters)
 {
+	display_params params;
+
+	params.cursor_row = KEYPAD_DISPLAY_MSG_CURSOR_ROW;
+	params.cursor_col = KEYPAD_DISPLAY_MSG_CURSOR_COL;
+	params.msg_len = KEYPAD_DISPLAY_MSG_LEN;
+
 	while(1) {
 		char keys_buffer[BUFFER_SIZE];
     	char read_cols[KEYPAD_COLS];
@@ -221,7 +232,7 @@ void keypad_task(void *pvParameters)
    		int i;
 		static int buffer_index = 0;
 
-    	vTaskDelay(600 / portTICK_RATE_MS);
+		vTaskDelay(600 / portTICK_RATE_MS);
 	
 		/* Laço para iterar entre as linhas do teclado */
 		for (i = 0; i < KEYPAD_ROWS; i++) {
@@ -245,13 +256,27 @@ void keypad_task(void *pvParameters)
 
 		/* Exibe a senha quando o buffer fica completo */
 		if (buffer_index == BUFFER_SIZE) {
+			char tmp_keys_buffer[BUFFER_SIZE + 1];
+
+			strncpy(tmp_keys_buffer, keys_buffer, BUFFER_SIZE);
+
+			/* Adiciona o string terminator */
+			tmp_keys_buffer[BUFFER_SIZE] = '\0';
+			strncpy(params.msg, tmp_keys_buffer, BUFFER_SIZE);
+
+            BaseType_t DisplaySendReturn = send_to_display_message_queue(&params);
+            if (DisplaySendReturn == pdTRUE) {
+                ESP_LOGI(TAG, "Mensagem enviada pela fila com sucesso");
+            } else {
+                ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila");
+            }
 			
-			if (keypad_mq_handle) {
-				xQueueSend(keypad_mq_handle, keys_buffer, portMAX_DELAY);
-				ESP_LOGI(TAG, "keys_buffer enviado pela queue");
-			} else {
-				ESP_LOGI(TAG, "keypad_mq_handle nao inicializada");
-			}	
+			// if (keypad_mq_handle) {
+			// 	xQueueSend(keypad_mq_handle, keys_buffer, portMAX_DELAY);
+			// 	ESP_LOGI(TAG, "keys_buffer enviado pela queue");
+			// } else {
+			// 	ESP_LOGI(TAG, "keypad_mq_handle nao inicializada");
+			// }	
 			
 			buffer_index = 0;
 			seconds_counter = 0;

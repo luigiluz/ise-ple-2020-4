@@ -2,7 +2,7 @@
 #define KEYPAD_H_
 
 /* Tamanho do buffer para armazenar os digitos do teclado */
-#define BUFFER_SIZE			2 
+#define BUFFER_SIZE			4
 
 extern void keypad_init(void);
 
