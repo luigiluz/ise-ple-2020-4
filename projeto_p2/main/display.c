@@ -2,10 +2,11 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/queue.h"
 
 #include "LiquidCrystal_I2C.h"
 
-#include "get_from_uart.h"
+#include "display.h"
 
 #include "esp_log.h"
 #include "esp_system.h"
@@ -14,9 +15,28 @@ static const char *TAG = "DISPLAY";
 
 #define DISPLAY_ADDRESS     0x27
 
+static QueueHandle_t DisplayMessageQueueHandle;
+
+void init_display_message_queue(void)
+{
+	if (DisplayMessageQueueHandle == NULL)
+		DisplayMessageQueueHandle = xQueueCreate(5, sizeof(display_params));
+}
+
+BaseType_t send_to_display_message_queue(display_params *params_to_send)
+{
+	BaseType_t DisplayQueueReturn = errQUEUE_FULL;
+
+    if (DisplayMessageQueueHandle != NULL) {
+        DisplayQueueReturn = xQueueSend(DisplayMessageQueueHandle, (void *)params_to_send, portMAX_DELAY);
+    }
+
+	return DisplayQueueReturn;
+}
+
 void display_task(void *pvParameters)
 {
-    char ch[13] = "application\n";
+    char ch[11] = "projeto_p2\n";
     LiquidCrystal_I2C(DISPLAY_ADDRESS, 16, 2);
     init();
     init();
@@ -32,22 +52,26 @@ void display_task(void *pvParameters)
     }
 
     while(1) {
-        BaseType_t GetFromUartQueueReturn;
-        display_msg received_msg;
+        BaseType_t GetFromDisplayQueueReturn;
+        display_params params;
 
-        GetFromUartQueueReturn = get_from_uart_read_queue(&received_msg);
+        GetFromDisplayQueueReturn = xQueueReceive(DisplayMessageQueueHandle, (void *)&params, portMAX_DELAY);
         
-        if (GetFromUartQueueReturn == pdPASS) {
-            clear();
-            ESP_LOGI(TAG, "Mensagem recebida da get_from_uart_read_queue");
-            ESP_LOGI(TAG, "received_msg.cursor: %d", received_msg.cursor);
-            ESP_LOGI(TAG, "received_msg.msg: %s", received_msg.msg);
-            setCursor(received_msg.cursor, 0);
-            for (int i=0; i < DISPLAY_MSG_MAX_LEN; i++) {
-                ESP_LOGI(TAG, "received_msg.msg[%d] = %c", i, received_msg.msg[i]);
-                if (received_msg.msg[i] == '\0')
+        if (GetFromDisplayQueueReturn == pdPASS) {
+            //clear();
+            ESP_LOGI(TAG, "Mensagem recebida da fila do display");
+            ESP_LOGI(TAG, "params.cursor_row: %d", params.cursor_row);
+            ESP_LOGI(TAG, "params.cursor_col: %d", params.cursor_col);
+            ESP_LOGI(TAG, "params.msg: %s", params.msg);
+            ESP_LOGI(TAG, "params.msg_len: %d", params.msg_len);
+
+            setCursor(params.cursor_row, params.cursor_col);
+
+            for (int i=0; i < params.msg_len; i++) {
+                ESP_LOGI(TAG, "params.msg[%d] = %c", i, params.msg[i]);
+                if (params.msg[i] == '\0')
                     break;
-                writeLCD(received_msg.msg[i]);
+                writeLCD(params.msg[i]);
             }
         }
 

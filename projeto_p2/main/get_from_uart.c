@@ -7,7 +7,7 @@
 
 #include "driver/uart.h"
 
-#include "get_from_uart.h"
+#include "display.h"
 
 #include "jsmn.h"
 
@@ -21,14 +21,18 @@ static const char *TAG = "GET_FROM_UART";
 
 /*
  * Os valores abaixo sao definidos considerando que se espera uma mensagem do seguinte tipo:
- * {"cursor": 2, "msg": "mensagem"}
+ * {"msg": "mensagem"}
  * Dessa forma, o valor da chave "cursor" esta no token 2 e o valor da chave "msg" esta no token 4
  */
-#define JSMN_PARSER_EXPECTED_RETURN     5
-#define JSMN_CURSOR_KEY_INDEX           1
-#define JSMN_CURSOR_VALUE_INDEX         2
-#define JSMN_MSG_KEY_INDEX              3
-#define JSMN_MSG_VALUE_INDEX            4
+#define JSMN_PARSER_EXPECTED_RETURN     3
+// #define JSMN_CURSOR_KEY_INDEX           1
+// #define JSMN_CURSOR_VALUE_INDEX         2
+#define JSMN_MSG_KEY_INDEX              1
+#define JSMN_MSG_VALUE_INDEX            2
+
+#define UART_DISPLAY_MSG_LEN            8
+#define UART_DISPLAY_MSG_CURSOR_ROW     0
+#define UART_DISPLAY_MSG_CURSOR_COL     0
 
 #define JSMN_CURSOR_KEY                 "cursor"
 #define JSMN_CURSOR_KEY_LEN             sizeof(JSMN_CURSOR_KEY) / sizeof(char)
@@ -36,21 +40,21 @@ static const char *TAG = "GET_FROM_UART";
 #define JSMN_MSG_KEY_LEN                sizeof(JSMN_MSG_KEY) / sizeof(char)
 
 
-static QueueHandle_t get_from_uart_mq_handle;
+// static QueueHandle_t get_from_uart_mq_handle;
 
-void get_from_uart_init_queue(void)
-{
-	if (get_from_uart_mq_handle == NULL)
-		get_from_uart_mq_handle = xQueueCreate(1, sizeof(display_msg));
-}
+// void get_from_uart_init_queue(void)
+// {
+// 	if (get_from_uart_mq_handle == NULL)
+// 		get_from_uart_mq_handle = xQueueCreate(1, sizeof(display_msg));
+// }
 
-BaseType_t get_from_uart_read_queue(display_msg *received_msg)
-{
-	BaseType_t GetFromUartQueueReturn;
-	GetFromUartQueueReturn = xQueueReceive(get_from_uart_mq_handle, received_msg, 0);
+// BaseType_t get_from_uart_read_queue(display_msg *received_msg)
+// {
+// 	BaseType_t GetFromUartQueueReturn;
+// 	GetFromUartQueueReturn = xQueueReceive(get_from_uart_mq_handle, received_msg, 0);
 
-	return GetFromUartQueueReturn;
-}
+// 	return GetFromUartQueueReturn;
+// }
 
 int get_int_key_from_token(char *json_msg, jsmntok_t *token, int token_number)
 {
@@ -86,29 +90,29 @@ void get_char_key_from_token(char *json_msg, jsmntok_t *token, int token_number,
     }
 }
 
-int parse_json_to_display_msg(char *temp, jsmntok_t *token, display_msg *msg) 
+int parse_json_to_display_msg(char *temp, jsmntok_t *token, display_params *params)
 {
     int msg_key_ret;
-    int cursor_key_ret;
-    int cursor_value;
+    // int cursor_key_ret;
+    // int cursor_value;
     int ret;
-    char msg_value[DISPLAY_MSG_MAX_LEN];
-    char cursor_key[JSMN_CURSOR_KEY_LEN + 1];
+    char msg_value[UART_DISPLAY_MSG_LEN];
+    // char cursor_key[JSMN_CURSOR_KEY_LEN + 1];
     char msg_key[JSMN_MSG_KEY_LEN + 1];
 
-    memset(cursor_key, '\0', JSMN_CURSOR_KEY_LEN + 1);
+    // memset(cursor_key, '\0', JSMN_CURSOR_KEY_LEN + 1);
     memset(msg_key, '\0', JSMN_MSG_KEY_LEN + 1);
-    memset(msg_value, '\0', DISPLAY_MSG_MAX_LEN);
+    memset(msg_value, '\0', UART_DISPLAY_MSG_LEN);
 
-    get_char_key_from_token(temp, token, JSMN_CURSOR_KEY_INDEX, cursor_key);
-    cursor_key_ret = strncmp(cursor_key, JSMN_CURSOR_KEY, JSMN_CURSOR_KEY_LEN + 1);
-    ESP_LOGI(TAG, "cursor_key : %s", cursor_key);
-    if (cursor_key_ret != 0) {
-        ret = -1;
-        return ret;
-    }
-    ESP_LOGI(TAG, "cursor_key_ret: %d", cursor_key_ret);
-    cursor_value = get_int_key_from_token(temp, token, JSMN_CURSOR_VALUE_INDEX);
+    // get_char_key_from_token(temp, token, JSMN_CURSOR_KEY_INDEX, cursor_key);
+    // cursor_key_ret = strncmp(cursor_key, JSMN_CURSOR_KEY, JSMN_CURSOR_KEY_LEN + 1);
+    // ESP_LOGI(TAG, "cursor_key : %s", cursor_key);
+    // if (cursor_key_ret != 0) {
+    //     ret = -1;
+    //     return ret;
+    // }
+    // ESP_LOGI(TAG, "cursor_key_ret: %d", cursor_key_ret);
+    // cursor_value = get_int_key_from_token(temp, token, JSMN_CURSOR_VALUE_INDEX);
 
     get_char_key_from_token(temp, token, JSMN_MSG_KEY_INDEX, msg_key);
     msg_key_ret = strncmp(msg_key, JSMN_MSG_KEY, JSMN_MSG_KEY_LEN + 1);
@@ -119,10 +123,11 @@ int parse_json_to_display_msg(char *temp, jsmntok_t *token, display_msg *msg)
     ESP_LOGI(TAG, "msg_key_ret: %d", msg_key_ret);
     get_char_key_from_token(temp, token, JSMN_MSG_VALUE_INDEX, msg_value);
 
-    msg->cursor = cursor_value;
-    strncpy(msg->msg, msg_value, DISPLAY_MSG_MAX_LEN);
-    ESP_LOGI(TAG, "cursor: %d", msg->cursor);
-    ESP_LOGI(TAG, "msg: %s", msg->msg);
+    // msg->cursor = cursor_value;
+    strncpy(params->msg, msg_value, UART_DISPLAY_MSG_LEN);
+    ESP_LOGI(TAG, "msg_value: %s", msg_value);
+    // ESP_LOGI(TAG, "cursor: %d", msg->cursor);
+    ESP_LOGI(TAG, "msg: %s", params->msg);
 
     ret = 0;
 
@@ -131,7 +136,10 @@ int parse_json_to_display_msg(char *temp, jsmntok_t *token, display_msg *msg)
 
 void get_from_uart_task(void *pvParameters)
 {
-    display_msg sent_msg;
+    display_params params;
+    params.cursor_row = UART_DISPLAY_MSG_CURSOR_ROW;
+    params.cursor_col = UART_DISPLAY_MSG_CURSOR_COL;
+    params.msg_len = UART_DISPLAY_MSG_LEN;
     // Configure a temporary buffer for the incoming data
     uint8_t *data = (uint8_t *) malloc(BUF_SIZE);
     char temp[64];
@@ -153,18 +161,18 @@ void get_from_uart_task(void *pvParameters)
             
             if (ret == JSMN_PARSER_EXPECTED_RETURN) {
                 ESP_LOGI(TAG, "json com tamanho correto");
-                ret = parse_json_to_display_msg(temp, token, &sent_msg); 
+                ret = parse_json_to_display_msg(temp, token, &params);
 
                 if (ret == 0) {
-                    if (get_from_uart_mq_handle) {
-			            	xQueueSend(get_from_uart_mq_handle, (void *)&sent_msg, portMAX_DELAY);
-			            	ESP_LOGI(TAG, "display_msg enviado pela queue");
-			            } else {
-			            	ESP_LOGI(TAG, "get_from_uart_mq_handle nao inicializada");
+                    BaseType_t DisplaySendReturn = send_to_display_message_queue(&params);
+                    if (DisplaySendReturn == pdTRUE) {
+                        ESP_LOGI(TAG, "Mensagem enviada pela fila com sucesso");
+                    } else {
+                        ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila");
+                    }
 			        }	
                 } else {
                 ESP_LOGI(TAG, "Mensagem no formato invalido");
-                }
             }
         }
     }

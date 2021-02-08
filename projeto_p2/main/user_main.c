@@ -65,7 +65,7 @@ void app_main(void)
     ESP_LOGI(TAG, "Inicio da aplicacao");
 	keypad_init();
     uart_init();
-    get_from_uart_init_queue();
+    init_display_message_queue();
 	
     xKeypadReturned = xTaskCreate(keypad_task, "KeypadTask", 1024 + 256, NULL, tskIDLE_PRIORITY, &xKeypadHandle);
     if (xKeypadReturned == pdPASS) {
