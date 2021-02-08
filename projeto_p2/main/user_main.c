@@ -45,16 +45,19 @@ static const char *TAG = "APPLICATION";
 #include "send_to_uart.h"
 #include "display.h"
 #include "get_from_uart.h"
+#include "read_adc.h"
 
 BaseType_t xKeypadReturned;
 BaseType_t xSendToUartReturned;
 BaseType_t xDisplayReturned;
 BaseType_t xGetFromUartReturned;
+BaseType_t xReadAdcReturned;
 
 TaskHandle_t xKeypadHandle = NULL;
 TaskHandle_t xSendToUartHandle = NULL;
 TaskHandle_t xDisplayHandle = NULL;
 TaskHandle_t xGetFromUartHandle = NULL;
+TaskHandle_t xReadAdcHandle = NULL;
 
 /*
  * @brief: app_main contem o core da aplicacao
@@ -66,6 +69,7 @@ void app_main(void)
 	keypad_init();
     uart_init();
     init_display_message_queue();
+    read_adc_init();
 	
     xKeypadReturned = xTaskCreate(keypad_task, "KeypadTask", 1024 + 256, NULL, tskIDLE_PRIORITY, &xKeypadHandle);
     if (xKeypadReturned == pdPASS) {
@@ -93,6 +97,13 @@ void app_main(void)
         ESP_LOGI(TAG, "GetFromUart foi criada com sucesso");
     } else {
         ESP_LOGI(TAG, "GetFromUart nao foi inicializada");
+    }
+
+    xReadAdcReturned = xTaskCreate(read_adc_task, "ReadAdcTask", 1024, NULL, tskIDLE_PRIORITY, &xReadAdcHandle);
+    if (xReadAdcReturned == pdPASS) {
+        ESP_LOGI(TAG, "ReadAdc foi criada com sucesso");
+    } else {
+        ESP_LOGI(TAG, "ReadAdc nao foi inicializada");
     }
 
     while(1) {
