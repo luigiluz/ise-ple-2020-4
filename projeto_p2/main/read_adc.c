@@ -11,6 +11,7 @@
 #include "esp_log.h"
 
 #include "display.h"
+#include "send_to_uart.h"
 
 static const char *TAG = "READ_ADC";
 
@@ -69,6 +70,8 @@ void read_adc_task()
     uint32_t mean_adc_value;
     static int i;
     display_params params;
+    uart_msg uart;
+    char adc_json_msg[19];
     char mean_adc_value_str[ADC_DISPLAY_MSG_LEN];
 
 	params.cursor_row = ADC_DISPLAY_MSG_CURSOR_ROW;
@@ -109,6 +112,19 @@ void read_adc_task()
             } else {
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila");
             }
+
+            sprintf(adc_json_msg, "{ \"ADC\": \"0x%02X\" }\n", (mean_adc_value & 0xFF));
+			
+			uart.msg = adc_json_msg;
+			uart.msg_len = sizeof(adc_json_msg) / sizeof(adc_json_msg[0]);
+
+			BaseType_t SendToUartReturn = append_to_send_to_uart_queue(&uart);
+            if (SendToUartReturn == pdTRUE) {
+                ESP_LOGI(TAG, "Mensagem enviada pela fila da uart com sucesso");
+            } else {
+                ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila da uart");
+            }
+
             i = 0;
         }
         vTaskDelay(pdMS_TO_TICKS(20));
