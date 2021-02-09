@@ -14,6 +14,7 @@
 
 #include "keypad.h"
 #include "display.h"
+#include "send_to_uart.h"
 
 static const char *TAG = "KEYPAD";
 
@@ -64,15 +65,15 @@ static QueueHandle_t keypad_mq_handle;
  * Quando a contagem atinge o valor de timeout, uma "timeout_flag" vai para nivel
  * alto para indicar esse evento
  */
-void hw_timer_callback(void *arg)
-{
-	seconds_counter = seconds_counter + 1;
+// void hw_timer_callback(void *arg)
+// {
+// 	seconds_counter = seconds_counter + 1;
 
-	if (seconds_counter == TIMEOUT) {
-		seconds_counter = 0;
-		timeout_flag = 1;
-	}
-}
+// 	if (seconds_counter == TIMEOUT) {
+// 		seconds_counter = 0;
+// 		timeout_flag = 1;
+// 	}
+// }
 
 /*
  * @brief: Inicializa os pinos GPIO a serem utilizados pelo display
@@ -100,25 +101,25 @@ void init_gpio(void)
     gpio_config(&input_conf);
 }
 
-void init_hw_timer(void)
-{
-	ESP_LOGI(TAG, "Configurando hardware timer");
-    /* Configura o hardware timer para emitir alarmes a cada 1 segundo */
-    hw_timer_init(hw_timer_callback, (void *)seconds_counter);
-    hw_timer_alarm_us(HWTIMER_INT_TIME, TEST_RELOAD);
-}
+// void init_hw_timer(void)
+// {
+// 	ESP_LOGI(TAG, "Configurando hardware timer");
+//     /* Configura o hardware timer para emitir alarmes a cada 1 segundo */
+//     hw_timer_init(hw_timer_callback, (void *)seconds_counter);
+//     hw_timer_alarm_us(HWTIMER_INT_TIME, TEST_RELOAD);
+// }
 
-void init_queue(void)
-{
-	if (keypad_mq_handle == NULL)
-		keypad_mq_handle = xQueueCreate(1, BUFFER_SIZE * sizeof(char));
-}
+// void init_queue(void)
+// {
+// 	if (keypad_mq_handle == NULL)
+// 		keypad_mq_handle = xQueueCreate(1, BUFFER_SIZE * sizeof(char));
+// }
 
 void keypad_init(void)
 {
 	init_gpio();
 	//init_hw_timer();
-	init_queue();
+	//init_queue();
 }
 
 BaseType_t keypad_read_from_queue(char *receive_buffer)
@@ -231,6 +232,8 @@ void keypad_task(void *pvParameters)
     	int output_sequence;
    		int i;
 		static int buffer_index = 0;
+		char keypad_json_msg[60];
+		uart_msg uart;
 
 		vTaskDelay(600 / portTICK_RATE_MS);
 	
@@ -270,7 +273,16 @@ void keypad_task(void *pvParameters)
             } else {
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila");
             }
+
+			// sprintf(keypad_json_msg,
+			// 		"{ \"key_0\": \"%c\", \"key_1\": \"%c\", \"key_2\": \"%c\", \"key_3\": \"%c\" }\n",
+			// 		keys_buffer[0], keys_buffer[1], keys_buffer[2], keys_buffer[3]);
 			
+			// uart.msg = keypad_json_msg;
+			// uart.msg_len = sizeof(keypad_json_msg) / sizeof(keypad_json_msg[0]);
+
+			// append_to_send_to_uart_queue(&uart);
+
 			// if (keypad_mq_handle) {
 			// 	xQueueSend(keypad_mq_handle, keys_buffer, portMAX_DELAY);
 			// 	ESP_LOGI(TAG, "keys_buffer enviado pela queue");

@@ -10,7 +10,7 @@
 #include "esp_log.h"
 #include "esp_system.h"
 
-#include "keypad.h"
+#include "send_to_uart.h"
 
 static const char *TAG = "SEND_TO_UART";
 
@@ -27,6 +27,19 @@ static const char *TAG = "SEND_TO_UART";
 
 #define BUF_SIZE (1024)
 
+static QueueHandle_t SendToUartQueueHandle;
+
+void init_send_to_uart_queue(void)
+{
+	if (SendToUartQueueHandle == NULL)
+		SendToUartQueueHandle = xQueueCreate(1, sizeof(uart_msg));
+};
+
+void append_to_send_to_uart_queue(uart_msg *msg)
+{
+    xQueueSend(SendToUartQueueHandle, (void *)msg, 0);
+}
+
 void uart_init(void)
 {
     // Configure parameters of an UART driver,
@@ -42,27 +55,27 @@ void uart_init(void)
     uart_driver_install(UART_NUM_0, BUF_SIZE * 2, 0, 0, NULL, 0);
 }
 
-void send_to_uart_task(void)
+void send_to_uart_task(void *pvParameters)
 {
-    // Configure a temporary buffer for the incoming data
-    char receive_buffer[BUFFER_SIZE];
-    BaseType_t KeypadQueueReturn;
+    BaseType_t SendToUartQueueReturn;
+    uart_msg received_msg;
 
     while(1) {
-        KeypadQueueReturn = keypad_read_from_queue(receive_buffer);
-        char json_receive_buffer[32];
+        // ESP_LOGI(TAG, "Executando a send_to_uart_task");
+        // SendToUartQueueReturn = xQueueReceive(SendToUartQueueHandle, (void *)&received_msg, portMAX_DELAY);
 
-        if (KeypadQueueReturn == pdPASS) {
-            ESP_LOGI(TAG, "informacao lida da queue do keypad");
+        // if (SendToUartQueueReturn == pdPASS) {
+        //     ESP_LOGI(TAG, "informacao lida da queue da send_to_uart");
 
-            sprintf(json_receive_buffer, "{ \"key_1\": \"%c\", \"key_2\": \"%c\" }\n", receive_buffer[0], receive_buffer[1]);
-            uart_write_bytes(UART_NUM_0, (const char *) json_receive_buffer, sizeof(json_receive_buffer));
-        }
+        //     //sprintf(json_receive_buffer, "{ \"key_1\": \"%c\", \"key_2\": \"%c\" }\n", receive_buffer[0], receive_buffer[1]);
+        //     uart_write_bytes(UART_NUM_0, (const char *) received_msg.msg, sizeof(received_msg.msg));
+        // }
 
         // TODO: fazer o parse dessas para o formato json
         // especificar o formato dessas mensagens: nome dos key e values
         // verificar o tamanho dessas mensagens
         // TODO: enviar a mensagem parseada via uart
         // uart_write_bytes(UART_NUM_0, (const char *) data, len);
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }

@@ -1,9 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+
 #include "driver/adc.h"
+#include "driver/hw_timer.h"
+
 #include "esp_log.h"
 
 #include "display.h"
@@ -12,9 +16,15 @@ static const char *TAG = "READ_ADC";
 
 #define ADC_BUFFER_SIZE             4
 
+#define ADC_SAMPLING_TIME           2000 /* In useg */
+
 #define ADC_DISPLAY_MSG_CURSOR_ROW  1 
 #define ADC_DISPLAY_MSG_CURSOR_COL  0
-#define ADC_DISPLAY_MSG_LEN         4
+#define ADC_DISPLAY_MSG_LEN         3
+
+// TaskHandle_t AdcTimerHandle;
+
+static uint8_t timer_flag = 0;
 
 void read_adc_init()
 {
@@ -38,16 +48,26 @@ uint32_t get_mean_adc_value(uint16_t *adc_data)
         sum += adc_data[i];
     }
 
-    mean_adc_value = sum >> 2;
+    mean_adc_value = sum / ADC_BUFFER_SIZE;
 
     return mean_adc_value;
+}
+
+// void adc_timer_callback(TimerHandle_t xTimer)
+// {
+//     timer_flag = 1;
+// }
+
+void hw_timer_callback(void *arg)
+{
+    timer_flag = 1;
 }
 
 void read_adc_task()
 {
     uint16_t adc_data[ADC_BUFFER_SIZE];
     uint32_t mean_adc_value;
-    int i;
+    static int i;
     display_params params;
     char mean_adc_value_str[ADC_DISPLAY_MSG_LEN];
 
@@ -55,24 +75,42 @@ void read_adc_task()
 	params.cursor_col = ADC_DISPLAY_MSG_CURSOR_COL;
 	params.msg_len = ADC_DISPLAY_MSG_LEN;
 
+    ESP_LOGI(TAG, "Initialize hw_timer for callback");
+    hw_timer_init(hw_timer_callback, NULL);
+    ESP_LOGI(TAG, "Set hw_timer timing time %d useg with reload", ADC_SAMPLING_TIME);
+    hw_timer_alarm_us(ADC_SAMPLING_TIME, pdTRUE);
+
+    // AdcTimerHandle = xTimerCreate("AdcTimer", pdMS_TO_TICKS(ADC_SAMPLING_TIME), pdTRUE, 0, adc_timer_callback);
+    // if (AdcTimerHandle != NULL) {
+    //     ESP_LOGI(TAG, "AdcTimer criado com sucesso");
+    //     xTimerStart(AdcTimerHandle, 0);
+    // }
+
     while (1) {
-        // TODO: Only iterate this in 2 milisseconds interval
-        for (i = 0; i < ADC_BUFFER_SIZE; i++) {
-            if (ESP_OK == adc_read(&adc_data[i])) {
-                ESP_LOGI(TAG, "adc read: %d", adc_data[i]);
+        // ESP_LOGI(TAG, "Executando a read_adc_task");
+        if (timer_flag) {
+            if (ESP_OK == adc_read_fast(&adc_data[i], 1)) {
+                // ESP_LOGI(TAG, "adc read: %d", adc_data[i]);
+            } else {
+                ESP_LOGI(TAG, "leitura do adc falhou");
             }
+            i++;
+            timer_flag = 0;
         }
-        vTaskDelay(pdMS_TO_TICKS(1000));
 
-        mean_adc_value = get_mean_adc_value(adc_data);
-        sprintf(mean_adc_value_str, "%d", mean_adc_value);
-        strncpy(params.msg, mean_adc_value_str, ADC_DISPLAY_MSG_LEN);
+        if (i == ADC_BUFFER_SIZE - 1) {
+            mean_adc_value = get_mean_adc_value(adc_data);
+            sprintf(mean_adc_value_str, "%d", mean_adc_value);
+            strncpy(params.msg, mean_adc_value_str, ADC_DISPLAY_MSG_LEN);
 
-        BaseType_t DisplaySendReturn = send_to_display_message_queue(&params);
-        if (DisplaySendReturn == pdTRUE) {
-            ESP_LOGI(TAG, "Mensagem enviada pela fila com sucesso");
-        } else {
-            ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila");
-        }	
+            BaseType_t DisplaySendReturn = send_to_display_message_queue(&params);
+            if (DisplaySendReturn == pdTRUE) {
+                ESP_LOGI(TAG, "Mensagem enviada pela fila com sucesso");
+            } else {
+                ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila");
+            }
+            i = 0;
+        }
+        vTaskDelay(pdMS_TO_TICKS(20));
     }
 }
