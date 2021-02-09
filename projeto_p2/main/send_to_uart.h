@@ -11,7 +11,7 @@ extern void uart_init(void);
 
 extern void init_send_to_uart_queue(void);
 
-extern void append_to_send_to_uart_queue(uart_msg *msg);
+extern BaseType_t append_to_send_to_uart_queue(uart_msg *msg);
 
 extern void send_to_uart_task(void *pvParameters);
 

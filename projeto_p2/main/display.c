@@ -59,16 +59,16 @@ void display_task(void *pvParameters)
         
         if (GetFromDisplayQueueReturn == pdPASS) {
             //clear();
-            ESP_LOGI(TAG, "Mensagem recebida da fila do display");
-            ESP_LOGI(TAG, "params.cursor_row: %d", params.cursor_row);
-            ESP_LOGI(TAG, "params.cursor_col: %d", params.cursor_col);
-            ESP_LOGI(TAG, "params.msg: %s", params.msg);
-            ESP_LOGI(TAG, "params.msg_len: %d", params.msg_len);
+            // ESP_LOGI(TAG, "Mensagem recebida na fila do display");
+            // ESP_LOGI(TAG, "params.cursor_row: %d", params.cursor_row);
+            // ESP_LOGI(TAG, "params.cursor_col: %d", params.cursor_col);
+            // ESP_LOGI(TAG, "params.msg: %s", params.msg);
+            // ESP_LOGI(TAG, "params.msg_len: %d", params.msg_len);
 
             setCursor(params.cursor_col, params.cursor_row);
 
             for (int i=0; i < params.msg_len; i++) {
-                ESP_LOGI(TAG, "params.msg[%d] = %c", i, params.msg[i]);
+                // ESP_LOGI(TAG, "params.msg[%d] = %c", i, params.msg[i]);
                 if (params.msg[i] == '\0')
                     break;
                 writeLCD(params.msg[i]);

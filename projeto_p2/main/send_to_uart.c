@@ -27,7 +27,7 @@ static const char *TAG = "SEND_TO_UART";
 
 #define BUF_SIZE (1024)
 
-static QueueHandle_t SendToUartQueueHandle;
+static QueueHandle_t SendToUartQueueHandle = NULL;
 
 void init_send_to_uart_queue(void)
 {
@@ -35,9 +35,15 @@ void init_send_to_uart_queue(void)
 		SendToUartQueueHandle = xQueueCreate(1, sizeof(uart_msg));
 };
 
-void append_to_send_to_uart_queue(uart_msg *msg)
+BaseType_t append_to_send_to_uart_queue(uart_msg *msg)
 {
-    xQueueSend(SendToUartQueueHandle, (void *)msg, 0);
+	BaseType_t SendToUartQueueReturn = errQUEUE_FULL;
+
+    if (SendToUartQueueHandle != NULL) {
+        SendToUartQueueReturn = xQueueSend(SendToUartQueueHandle, (void *)msg, pdMS_TO_TICKS(100));
+    }
+
+    return SendToUartQueueReturn;
 }
 
 void uart_init(void)
@@ -62,14 +68,14 @@ void send_to_uart_task(void *pvParameters)
 
     while(1) {
         // ESP_LOGI(TAG, "Executando a send_to_uart_task");
-        // SendToUartQueueReturn = xQueueReceive(SendToUartQueueHandle, (void *)&received_msg, portMAX_DELAY);
+        SendToUartQueueReturn = xQueueReceive(SendToUartQueueHandle, (void *)&received_msg, portMAX_DELAY);
 
-        // if (SendToUartQueueReturn == pdPASS) {
-        //     ESP_LOGI(TAG, "informacao lida da queue da send_to_uart");
+        if (SendToUartQueueReturn == pdPASS) {
+            ESP_LOGI(TAG, "informacao lida da queue da send_to_uart");
 
-        //     //sprintf(json_receive_buffer, "{ \"key_1\": \"%c\", \"key_2\": \"%c\" }\n", receive_buffer[0], receive_buffer[1]);
-        //     uart_write_bytes(UART_NUM_0, (const char *) received_msg.msg, sizeof(received_msg.msg));
-        // }
+            //sprintf(json_receive_buffer, "{ \"key_1\": \"%c\", \"key_2\": \"%c\" }\n", receive_buffer[0], receive_buffer[1]);
+            uart_write_bytes(UART_NUM_0, (const char *) received_msg.msg, received_msg.msg_len);
+        }
 
         // TODO: fazer o parse dessas para o formato json
         // especificar o formato dessas mensagens: nome dos key e values

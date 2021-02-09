@@ -226,6 +226,7 @@ void keypad_task(void *pvParameters)
 	params.msg_len = KEYPAD_DISPLAY_MSG_LEN;
 
 	while(1) {
+		// ESP_LOGI(TAG, "Executando a keypad_task");
 		char keys_buffer[BUFFER_SIZE];
     	char read_cols[KEYPAD_COLS];
     	char pr_key;
@@ -269,19 +270,24 @@ void keypad_task(void *pvParameters)
 
             BaseType_t DisplaySendReturn = send_to_display_message_queue(&params);
             if (DisplaySendReturn == pdTRUE) {
-                ESP_LOGI(TAG, "Mensagem enviada pela fila com sucesso");
+                ESP_LOGI(TAG, "Mensagem enviada pela fila do display com sucesso");
             } else {
-                ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila");
+                ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila do display");
             }
 
-			// sprintf(keypad_json_msg,
-			// 		"{ \"key_0\": \"%c\", \"key_1\": \"%c\", \"key_2\": \"%c\", \"key_3\": \"%c\" }\n",
-			// 		keys_buffer[0], keys_buffer[1], keys_buffer[2], keys_buffer[3]);
+			sprintf(keypad_json_msg,
+					"{ \"key_0\": \"%c\", \"key_1\": \"%c\", \"key_2\": \"%c\", \"key_3\": \"%c\" }\n",
+					keys_buffer[0], keys_buffer[1], keys_buffer[2], keys_buffer[3]);
 			
-			// uart.msg = keypad_json_msg;
-			// uart.msg_len = sizeof(keypad_json_msg) / sizeof(keypad_json_msg[0]);
+			uart.msg = keypad_json_msg;
+			uart.msg_len = sizeof(keypad_json_msg) / sizeof(keypad_json_msg[0]);
 
-			// append_to_send_to_uart_queue(&uart);
+			BaseType_t SendToUartReturn = append_to_send_to_uart_queue(&uart);
+            if (SendToUartReturn == pdTRUE) {
+                ESP_LOGI(TAG, "Mensagem enviada pela fila da uart com sucesso");
+            } else {
+                ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila da uart");
+            }
 
 			// if (keypad_mq_handle) {
 			// 	xQueueSend(keypad_mq_handle, keys_buffer, portMAX_DELAY);
@@ -289,11 +295,10 @@ void keypad_task(void *pvParameters)
 			// } else {
 			// 	ESP_LOGI(TAG, "keypad_mq_handle nao inicializada");
 			// }	
-			
 			buffer_index = 0;
 			seconds_counter = 0;
-			ESP_LOGI(TAG, "Senha cadastrada com sucesso!");
 		}
+		vTaskDelay(pdMS_TO_TICKS(300));
 
 		// /* Avisa do tempo restante */
 		// if (seconds_counter == TIMEOUT - TIMER_ALERT) {

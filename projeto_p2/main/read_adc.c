@@ -105,7 +105,7 @@ void read_adc_task()
 
             BaseType_t DisplaySendReturn = send_to_display_message_queue(&params);
             if (DisplaySendReturn == pdTRUE) {
-                ESP_LOGI(TAG, "Mensagem enviada pela fila com sucesso");
+                // ESP_LOGI(TAG, "Mensagem enviada pela fila com sucesso");
             } else {
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila");
             }
