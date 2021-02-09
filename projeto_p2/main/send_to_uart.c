@@ -32,7 +32,7 @@ static QueueHandle_t SendToUartQueueHandle = NULL;
 void init_send_to_uart_queue(void)
 {
 	if (SendToUartQueueHandle == NULL)
-		SendToUartQueueHandle = xQueueCreate(1, sizeof(uart_msg));
+		SendToUartQueueHandle = xQueueCreate(5, sizeof(uart_msg));
 };
 
 BaseType_t append_to_send_to_uart_queue(uart_msg *msg)
