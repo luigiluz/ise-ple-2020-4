@@ -54,6 +54,11 @@ uint32_t get_mean_adc_value(uint16_t *adc_data)
     return mean_adc_value;
 }
 
+uint32_t convert_adc_value(uint32_t adc_value)
+{
+    return (adc_value * 255) / 1023;
+}
+
 // void adc_timer_callback(TimerHandle_t xTimer)
 // {
 //     timer_flag = 1;
@@ -68,7 +73,7 @@ void read_adc_task()
 {
     uint16_t adc_data[ADC_BUFFER_SIZE];
     uint32_t mean_adc_value;
-    static int i;
+    static int i = 0;
     display_params params;
     uart_msg uart;
     char adc_json_msg[19];
@@ -93,17 +98,22 @@ void read_adc_task()
         // ESP_LOGI(TAG, "Executando a read_adc_task");
         if (timer_flag) {
             if (ESP_OK == adc_read_fast(&adc_data[i], 1)) {
+                //ESP_LOGI(TAG, "adc_data[%d] = %d", i, adc_data[i]);
                 // ESP_LOGI(TAG, "adc read: %d", adc_data[i]);
             } else {
                 ESP_LOGI(TAG, "leitura do adc falhou");
             }
+            //ESP_LOGI(TAG, "i = %d", i);
             i++;
             timer_flag = 0;
         }
 
-        if (i == ADC_BUFFER_SIZE - 1) {
+        if (i == ADC_BUFFER_SIZE) {
             mean_adc_value = get_mean_adc_value(adc_data);
+            mean_adc_value = convert_adc_value(mean_adc_value);
+
             sprintf(mean_adc_value_str, "%d", mean_adc_value);
+            
             strncpy(params.msg, mean_adc_value_str, ADC_DISPLAY_MSG_LEN);
 
             display_semphr_take();
@@ -117,7 +127,7 @@ void read_adc_task()
 
             display_semphr_give();
 
-            sprintf(adc_json_msg, "{ \"ADC\": \"0x%02X\" }\n", (mean_adc_value & 0xFF));
+            sprintf(adc_json_msg, "{ \"ADC\": \"0x%02X\" }\n", mean_adc_value & 0xFF);
 			
 			uart.msg = adc_json_msg;
 			uart.msg_len = sizeof(adc_json_msg) / sizeof(adc_json_msg[0]);

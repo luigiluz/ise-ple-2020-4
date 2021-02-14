@@ -89,7 +89,7 @@ void send_to_uart_task(void *pvParameters)
         SendToUartQueueReturn = xQueueReceive(SendToUartQueueHandle, (void *)&received_msg, portMAX_DELAY);
 
         if (SendToUartQueueReturn == pdPASS) {
-            ESP_LOGI(TAG, "informacao lida da queue da send_to_uart");
+            //ESP_LOGI(TAG, "informacao lida da queue da send_to_uart");
 
             //sprintf(json_receive_buffer, "{ \"key_1\": \"%c\", \"key_2\": \"%c\" }\n", receive_buffer[0], receive_buffer[1]);
             uart_write_bytes(UART_NUM_0, (const char *) received_msg.msg, received_msg.msg_len);
