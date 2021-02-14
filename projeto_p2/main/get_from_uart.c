@@ -137,6 +137,7 @@ int parse_json_to_display_msg(char *temp, jsmntok_t *token, display_params *para
 void get_from_uart_task(void *pvParameters)
 {
     display_params params;
+    params.tsk_id = GET_FROM_UART_TASK_ID;
     params.cursor_row = UART_DISPLAY_MSG_CURSOR_ROW;
     params.cursor_col = UART_DISPLAY_MSG_CURSOR_COL;
     params.msg_len = UART_DISPLAY_MSG_LEN;

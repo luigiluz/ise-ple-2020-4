@@ -62,6 +62,7 @@ void display_task(void *pvParameters)
     while(1) {
         BaseType_t GetFromDisplayQueueReturn;
         display_params params;
+        static uint16_t prev_msg_len = 0;
 
         GetFromDisplayQueueReturn = xQueueReceive(DisplayMessageQueueHandle, (void *)&params, pdMS_TO_TICKS(100));
 
@@ -74,6 +75,26 @@ void display_task(void *pvParameters)
             // ESP_LOGI(TAG, "params.msg_len: %d", params.msg_len);
 
             setCursor(params.cursor_col, params.cursor_row);
+
+            if (params.tsk_id == GET_FROM_UART_TASK_ID) {
+                uint16_t msg_len = 1;
+                /* Routine to get the msg_len */
+                for (int k = 0; k < params.msg_len; k++) {
+                    if(params.msg[k] == '\0')
+                        break;
+
+                    msg_len++;
+                }
+
+                /* Clean display characters if current msg is shorter than the previous one */
+                if (msg_len < prev_msg_len) {
+                    for (int i = 0; i < params.msg_len; i++) {
+                        writeLCD(' ');
+                    }
+                }
+                setCursor(params.cursor_col, params.cursor_row);
+                prev_msg_len = msg_len;
+            }
 
             for (int i=0; i < params.msg_len; i++) {
                 if (params.msg[i] == '\0')

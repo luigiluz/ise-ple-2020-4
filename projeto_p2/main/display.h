@@ -3,7 +3,16 @@
 
 #define DISPLAY_MSG_MAX_LEN     16
 
+enum task_id {
+    DISPLAY_TASK_ID = 0,
+    GET_FROM_UART_TASK_ID,
+    KEYPAD_TASK_ID,
+    READ_ADC_TASK_ID,
+    SEND_TO_UART_TASK_ID
+};
+
 typedef struct {
+    enum task_id tsk_id;
     uint16_t cursor_row;
     uint16_t cursor_col;
     char msg[DISPLAY_MSG_MAX_LEN];

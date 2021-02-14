@@ -79,6 +79,7 @@ void read_adc_task()
     char adc_json_msg[19];
     char mean_adc_value_str[ADC_DISPLAY_MSG_LEN];
 
+	params.tsk_id = READ_ADC_TASK_ID;
 	params.cursor_row = ADC_DISPLAY_MSG_CURSOR_ROW;
 	params.cursor_col = ADC_DISPLAY_MSG_CURSOR_COL;
 	params.msg_len = ADC_DISPLAY_MSG_LEN;

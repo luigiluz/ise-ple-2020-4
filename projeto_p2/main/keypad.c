@@ -221,6 +221,7 @@ void keypad_task(void *pvParameters)
 {
 	display_params params;
 
+	params.tsk_id = KEYPAD_TASK_ID;
 	params.cursor_row = KEYPAD_DISPLAY_MSG_CURSOR_ROW;
 	params.cursor_col = KEYPAD_DISPLAY_MSG_CURSOR_COL;
 	params.msg_len = KEYPAD_DISPLAY_MSG_LEN;
