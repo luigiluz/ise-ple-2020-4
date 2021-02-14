@@ -54,28 +54,16 @@ BaseType_t send_to_display_message_queue(display_params *params_to_send)
 
 void display_task(void *pvParameters)
 {
-    // char ch[11] = "projeto_p2\n";
     LiquidCrystal_I2C(DISPLAY_ADDRESS, 16, 2);
     init();
     init();
     backlight();
-    // setCursor(0, 0);
-
-    // int i = 0;
-    // while(1) {
-    //     if (ch[i] == '\n')
-    //         break;
-    //     writeLCD(ch[i]);
-    //     i++;
-    // }
 
     while(1) {
         BaseType_t GetFromDisplayQueueReturn;
         display_params params;
 
         GetFromDisplayQueueReturn = xQueueReceive(DisplayMessageQueueHandle, (void *)&params, pdMS_TO_TICKS(100));
-        
-        ESP_LOGI(TAG, "Messages waiting: %d", uxQueueMessagesWaiting(DisplayMessageQueueHandle));
 
         if (GetFromDisplayQueueReturn == pdPASS) {
             //clear();
@@ -88,7 +76,6 @@ void display_task(void *pvParameters)
             setCursor(params.cursor_col, params.cursor_row);
 
             for (int i=0; i < params.msg_len; i++) {
-                // ESP_LOGI(TAG, "params.msg[%d] = %c", i, params.msg[i]);
                 if (params.msg[i] == '\0')
                     break;
                 writeLCD(params.msg[i]);

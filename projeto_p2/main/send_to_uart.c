@@ -88,20 +88,13 @@ void send_to_uart_task(void *pvParameters)
         // ESP_LOGI(TAG, "Executando a send_to_uart_task");
         SendToUartQueueReturn = xQueueReceive(SendToUartQueueHandle, (void *)&received_msg, portMAX_DELAY);
 
-        ESP_LOGI(TAG, "Messages waiting: %d", uxQueueMessagesWaiting(SendToUartQueueHandle));
-
         if (SendToUartQueueReturn == pdPASS) {
             ESP_LOGI(TAG, "informacao lida da queue da send_to_uart");
 
             //sprintf(json_receive_buffer, "{ \"key_1\": \"%c\", \"key_2\": \"%c\" }\n", receive_buffer[0], receive_buffer[1]);
             uart_write_bytes(UART_NUM_0, (const char *) received_msg.msg, received_msg.msg_len);
         }
-
-        // TODO: fazer o parse dessas para o formato json
-        // especificar o formato dessas mensagens: nome dos key e values
-        // verificar o tamanho dessas mensagens
-        // TODO: enviar a mensagem parseada via uart
-        // uart_write_bytes(UART_NUM_0, (const char *) data, len);
+        
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }

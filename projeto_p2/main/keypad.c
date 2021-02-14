@@ -260,17 +260,13 @@ void keypad_task(void *pvParameters)
 
 		/* Exibe a senha quando o buffer fica completo */
 		if (buffer_index == BUFFER_SIZE) {
-			ESP_LOGI(TAG, "entrei na condicao de envio");
 			char tmp_keys_buffer[BUFFER_SIZE + 1];
 
 			strncpy(tmp_keys_buffer, keys_buffer, BUFFER_SIZE);
 
-			ESP_LOGI(TAG, "adicionando o string temrinator");
 			/* Adiciona o string terminator */
 			tmp_keys_buffer[BUFFER_SIZE] = '\0';
 			strncpy(params.msg, tmp_keys_buffer, BUFFER_SIZE);
-
-			ESP_LOGI(TAG, "tentando enviar pra fila do display");
 
 			display_semphr_take();
 
@@ -290,9 +286,7 @@ void keypad_task(void *pvParameters)
 			uart.msg = keypad_json_msg;
 			uart.msg_len = sizeof(keypad_json_msg) / sizeof(keypad_json_msg[0]);
 
-			ESP_LOGI(TAG, "tentando pegar o semaforo");
 			send_to_uart_semphr_take();
-			ESP_LOGI(TAG, "peguei o semaforo");
 
 			BaseType_t SendToUartReturn = append_to_send_to_uart_queue(&uart);
             if (SendToUartReturn == pdTRUE) {
