@@ -164,14 +164,20 @@ void get_from_uart_task(void *pvParameters)
                 ret = parse_json_to_display_msg(temp, token, &params);
 
                 if (ret == 0) {
+                    
+                    display_semphr_take();
+
                     BaseType_t DisplaySendReturn = send_to_display_message_queue(&params);
                     if (DisplaySendReturn == pdTRUE) {
                         ESP_LOGI(TAG, "Mensagem enviada pela fila com sucesso");
                     } else {
                         ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila");
                     }
-			        }	
-                } else {
+
+                    display_semphr_give();
+
+			    }	
+            } else {
                 ESP_LOGI(TAG, "Mensagem no formato invalido");
             }
         }

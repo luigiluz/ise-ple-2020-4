@@ -260,13 +260,19 @@ void keypad_task(void *pvParameters)
 
 		/* Exibe a senha quando o buffer fica completo */
 		if (buffer_index == BUFFER_SIZE) {
+			ESP_LOGI(TAG, "entrei na condicao de envio");
 			char tmp_keys_buffer[BUFFER_SIZE + 1];
 
 			strncpy(tmp_keys_buffer, keys_buffer, BUFFER_SIZE);
 
+			ESP_LOGI(TAG, "adicionando o string temrinator");
 			/* Adiciona o string terminator */
 			tmp_keys_buffer[BUFFER_SIZE] = '\0';
 			strncpy(params.msg, tmp_keys_buffer, BUFFER_SIZE);
+
+			ESP_LOGI(TAG, "tentando enviar pra fila do display");
+
+			display_semphr_take();
 
             BaseType_t DisplaySendReturn = send_to_display_message_queue(&params);
             if (DisplaySendReturn == pdTRUE) {
@@ -275,12 +281,18 @@ void keypad_task(void *pvParameters)
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila do display");
             }
 
+			display_semphr_give();
+
 			sprintf(keypad_json_msg,
 					"{ \"key_0\": \"%c\", \"key_1\": \"%c\", \"key_2\": \"%c\", \"key_3\": \"%c\" }\n",
 					keys_buffer[0], keys_buffer[1], keys_buffer[2], keys_buffer[3]);
 			
 			uart.msg = keypad_json_msg;
 			uart.msg_len = sizeof(keypad_json_msg) / sizeof(keypad_json_msg[0]);
+
+			ESP_LOGI(TAG, "tentando pegar o semaforo");
+			send_to_uart_semphr_take();
+			ESP_LOGI(TAG, "peguei o semaforo");
 
 			BaseType_t SendToUartReturn = append_to_send_to_uart_queue(&uart);
             if (SendToUartReturn == pdTRUE) {
@@ -289,12 +301,15 @@ void keypad_task(void *pvParameters)
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila da uart");
             }
 
+			send_to_uart_semphr_give();
+
 			// if (keypad_mq_handle) {
 			// 	xQueueSend(keypad_mq_handle, keys_buffer, portMAX_DELAY);
 			// 	ESP_LOGI(TAG, "keys_buffer enviado pela queue");
 			// } else {
 			// 	ESP_LOGI(TAG, "keypad_mq_handle nao inicializada");
-			// }	
+			// }
+
 			buffer_index = 0;
 			seconds_counter = 0;
 		}

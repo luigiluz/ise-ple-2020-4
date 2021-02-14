@@ -71,6 +71,9 @@ void app_main(void)
     init_display_message_queue();
     read_adc_init();
     init_send_to_uart_queue();
+    init_display_semph();
+    init_send_to_uart_semph();
+
 	
     xKeypadReturned = xTaskCreate(keypad_task, "KeypadTask", 1024 + 256, NULL, 1, &xKeypadHandle);
     if (xKeypadReturned == pdPASS) {

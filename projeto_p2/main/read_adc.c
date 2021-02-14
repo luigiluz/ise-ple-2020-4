@@ -106,6 +106,8 @@ void read_adc_task()
             sprintf(mean_adc_value_str, "%d", mean_adc_value);
             strncpy(params.msg, mean_adc_value_str, ADC_DISPLAY_MSG_LEN);
 
+            display_semphr_take();
+
             BaseType_t DisplaySendReturn = send_to_display_message_queue(&params);
             if (DisplaySendReturn == pdTRUE) {
                 // ESP_LOGI(TAG, "Mensagem enviada pela fila com sucesso");
@@ -113,10 +115,14 @@ void read_adc_task()
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila");
             }
 
+            display_semphr_give();
+
             sprintf(adc_json_msg, "{ \"ADC\": \"0x%02X\" }\n", (mean_adc_value & 0xFF));
 			
 			uart.msg = adc_json_msg;
 			uart.msg_len = sizeof(adc_json_msg) / sizeof(adc_json_msg[0]);
+
+            send_to_uart_semphr_take();
 
 			BaseType_t SendToUartReturn = append_to_send_to_uart_queue(&uart);
             if (SendToUartReturn == pdTRUE) {
@@ -125,8 +131,10 @@ void read_adc_task()
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila da uart");
             }
 
+            send_to_uart_semphr_give();
+
             i = 0;
         }
-        vTaskDelay(pdMS_TO_TICKS(20));
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }

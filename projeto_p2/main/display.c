@@ -3,6 +3,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
+#include "freertos/semphr.h"
 
 #include "LiquidCrystal_I2C.h"
 
@@ -15,12 +16,29 @@ static const char *TAG = "DISPLAY";
 
 #define DISPLAY_ADDRESS     0x27
 
-static QueueHandle_t DisplayMessageQueueHandle;
+static QueueHandle_t DisplayMessageQueueHandle = NULL;
+static SemaphoreHandle_t DisplaySemphrHandle = NULL;
+
+void init_display_semph(void)
+{
+    if (DisplaySemphrHandle == NULL)
+        DisplaySemphrHandle = xSemaphoreCreateMutex();
+}
+
+void display_semphr_take(void)
+{
+    xSemaphoreTake(DisplaySemphrHandle, portMAX_DELAY);
+}
+
+void display_semphr_give(void)
+{
+    xSemaphoreGive(DisplaySemphrHandle);
+}
 
 void init_display_message_queue(void)
 {
 	if (DisplayMessageQueueHandle == NULL)
-		DisplayMessageQueueHandle = xQueueCreate(5, sizeof(display_params));
+		DisplayMessageQueueHandle = xQueueCreate(2, sizeof(display_params));
 }
 
 BaseType_t send_to_display_message_queue(display_params *params_to_send)
@@ -55,8 +73,10 @@ void display_task(void *pvParameters)
         BaseType_t GetFromDisplayQueueReturn;
         display_params params;
 
-        GetFromDisplayQueueReturn = xQueueReceive(DisplayMessageQueueHandle, (void *)&params, portMAX_DELAY);
+        GetFromDisplayQueueReturn = xQueueReceive(DisplayMessageQueueHandle, (void *)&params, pdMS_TO_TICKS(100));
         
+        ESP_LOGI(TAG, "Messages waiting: %d", uxQueueMessagesWaiting(DisplayMessageQueueHandle));
+
         if (GetFromDisplayQueueReturn == pdPASS) {
             //clear();
             // ESP_LOGI(TAG, "Mensagem recebida na fila do display");

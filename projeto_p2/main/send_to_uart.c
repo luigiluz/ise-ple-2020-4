@@ -4,6 +4,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/semphr.h"
 
 #include "driver/uart.h"
 
@@ -28,11 +29,28 @@ static const char *TAG = "SEND_TO_UART";
 #define BUF_SIZE (1024)
 
 static QueueHandle_t SendToUartQueueHandle = NULL;
+static SemaphoreHandle_t SendToUartSemphrHandle = NULL;
+
+void init_send_to_uart_semph(void)
+{
+    if (SendToUartSemphrHandle == NULL)
+        SendToUartSemphrHandle = xSemaphoreCreateMutex();
+}
+
+void send_to_uart_semphr_take(void)
+{
+    xSemaphoreTake(SendToUartSemphrHandle, portMAX_DELAY);
+}
+
+void send_to_uart_semphr_give(void)
+{
+    xSemaphoreGive(SendToUartSemphrHandle);
+}
 
 void init_send_to_uart_queue(void)
 {
 	if (SendToUartQueueHandle == NULL)
-		SendToUartQueueHandle = xQueueCreate(5, sizeof(uart_msg));
+		SendToUartQueueHandle = xQueueCreate(10, sizeof(uart_msg));
 };
 
 BaseType_t append_to_send_to_uart_queue(uart_msg *msg)
@@ -40,7 +58,7 @@ BaseType_t append_to_send_to_uart_queue(uart_msg *msg)
 	BaseType_t SendToUartQueueReturn = errQUEUE_FULL;
 
     if (SendToUartQueueHandle != NULL) {
-        SendToUartQueueReturn = xQueueSend(SendToUartQueueHandle, (void *)msg, pdMS_TO_TICKS(100));
+        SendToUartQueueReturn = xQueueSend(SendToUartQueueHandle, (void *)msg, portMAX_DELAY);
     }
 
     return SendToUartQueueReturn;
@@ -69,6 +87,8 @@ void send_to_uart_task(void *pvParameters)
     while(1) {
         // ESP_LOGI(TAG, "Executando a send_to_uart_task");
         SendToUartQueueReturn = xQueueReceive(SendToUartQueueHandle, (void *)&received_msg, portMAX_DELAY);
+
+        ESP_LOGI(TAG, "Messages waiting: %d", uxQueueMessagesWaiting(SendToUartQueueHandle));
 
         if (SendToUartQueueReturn == pdPASS) {
             ESP_LOGI(TAG, "informacao lida da queue da send_to_uart");
