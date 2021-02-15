@@ -17,13 +17,13 @@ typedef struct {
     uint16_t cursor_col;
     char msg[DISPLAY_MSG_MAX_LEN];
     uint16_t msg_len;
-} display_params;
+} display_msg_t;
 
 extern void display_message_queue_init(void);
 
 extern void display_task(void *pvParameters);
 
-extern BaseType_t display_append_to_message_queue(display_params *params_to_send);
+extern BaseType_t display_append_to_message_queue(display_msg_t *params_to_send);
 
 extern void display_semph_init(void);
 

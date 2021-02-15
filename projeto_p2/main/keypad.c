@@ -189,14 +189,27 @@ uart_msg_t build_keypad_uart_msg(char *keys_buffer)
 	return uart_msg;
 }
 
+display_msg_t build_keypad_display_msg(char *keys_buffer)
+{
+	display_msg_t display_msg;
+	static char tmp_keys_buffer[BUFFER_SIZE + 1];
+
+	display_msg.tsk_id = KEYPAD_TASK_ID;
+	display_msg.cursor_row = KEYPAD_DISPLAY_MSG_CURSOR_ROW;
+	display_msg.cursor_col = KEYPAD_DISPLAY_MSG_CURSOR_COL;
+	display_msg.msg_len = KEYPAD_DISPLAY_MSG_LEN;
+
+	strncpy(tmp_keys_buffer, keys_buffer, BUFFER_SIZE);
+	tmp_keys_buffer[BUFFER_SIZE] = '\0';
+
+	strncpy(display_msg.msg, tmp_keys_buffer, BUFFER_SIZE);
+
+	return display_msg;
+}
+
 void keypad_task(void *pvParameters)
 {
-	display_params params;
-
-	params.tsk_id = KEYPAD_TASK_ID;
-	params.cursor_row = KEYPAD_DISPLAY_MSG_CURSOR_ROW;
-	params.cursor_col = KEYPAD_DISPLAY_MSG_CURSOR_COL;
-	params.msg_len = KEYPAD_DISPLAY_MSG_LEN;
+	display_msg_t display_msg;
 
 	while(1) {
 		char keys_buffer[BUFFER_SIZE];
@@ -231,15 +244,9 @@ void keypad_task(void *pvParameters)
 
 		/* Exibe a senha quando o buffer fica completo */
 		if (buffer_index == BUFFER_SIZE) {
-			char tmp_keys_buffer[BUFFER_SIZE + 1];
+			display_msg = build_keypad_display_msg(keys_buffer);
 
-			strncpy(tmp_keys_buffer, keys_buffer, BUFFER_SIZE);
-
-			/* Adiciona o string terminator */
-			tmp_keys_buffer[BUFFER_SIZE] = '\0';
-			strncpy(params.msg, tmp_keys_buffer, BUFFER_SIZE);
-
-            BaseType_t DisplaySendReturn = display_append_to_message_queue(&params);
+            BaseType_t DisplaySendReturn = display_append_to_message_queue(&display_msg);
             if (DisplaySendReturn != pdTRUE) {
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila do display");
             }

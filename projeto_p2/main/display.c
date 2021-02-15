@@ -38,17 +38,17 @@ void display_semphr_give(void)
 void display_message_queue_init(void)
 {
 	if (DisplayMessageQueueHandle == NULL)
-		DisplayMessageQueueHandle = xQueueCreate(2, sizeof(display_params));
+		DisplayMessageQueueHandle = xQueueCreate(2, sizeof(display_msg_t));
 }
 
-BaseType_t display_append_to_message_queue(display_params *params_to_send)
+BaseType_t display_append_to_message_queue(display_msg_t *display_msg)
 {
     display_semphr_take();
 
 	BaseType_t DisplayQueueReturn = errQUEUE_FULL;
 
     if (DisplayMessageQueueHandle != NULL) {
-        DisplayQueueReturn = xQueueSend(DisplayMessageQueueHandle, (void *)params_to_send, portMAX_DELAY);
+        DisplayQueueReturn = xQueueSend(DisplayMessageQueueHandle, (void *)display_msg, portMAX_DELAY);
     }
 
     display_semphr_give();
@@ -65,19 +65,19 @@ void display_task(void *pvParameters)
 
     while(1) {
         BaseType_t GetFromDisplayQueueReturn;
-        display_params params;
+        display_msg_t display_msg;
         static uint16_t prev_msg_len = 0;
 
-        GetFromDisplayQueueReturn = xQueueReceive(DisplayMessageQueueHandle, (void *)&params, pdMS_TO_TICKS(100));
+        GetFromDisplayQueueReturn = xQueueReceive(DisplayMessageQueueHandle, (void *)&display_msg, pdMS_TO_TICKS(100));
 
         if (GetFromDisplayQueueReturn == pdPASS) {
-            setCursor(params.cursor_col, params.cursor_row);
+            setCursor(display_msg.cursor_col, display_msg.cursor_row);
 
-            if (params.tsk_id == GET_FROM_UART_TASK_ID) {
+            if (display_msg.tsk_id == GET_FROM_UART_TASK_ID) {
                 uint16_t msg_len = 1;
                 /* Routine to get the msg_len */
-                for (int k = 0; k < params.msg_len; k++) {
-                    if(params.msg[k] == '\0')
+                for (int k = 0; k < display_msg.msg_len; k++) {
+                    if(display_msg.msg[k] == '\0')
                         break;
 
                     msg_len++;
@@ -85,18 +85,18 @@ void display_task(void *pvParameters)
 
                 /* Clean display characters if current msg is shorter than the previous one */
                 if (msg_len < prev_msg_len) {
-                    for (int i = 0; i < params.msg_len; i++) {
+                    for (int i = 0; i < display_msg.msg_len; i++) {
                         writeLCD(' ');
                     }
                 }
-                setCursor(params.cursor_col, params.cursor_row);
+                setCursor(display_msg.cursor_col, display_msg.cursor_row);
                 prev_msg_len = msg_len;
             }
 
-            for (int i=0; i < params.msg_len; i++) {
-                if (params.msg[i] == '\0')
+            for (int i=0; i < display_msg.msg_len; i++) {
+                if (display_msg.msg[i] == '\0')
                     break;
-                writeLCD(params.msg[i]);
+                writeLCD(display_msg.msg[i]);
             }
         }
 

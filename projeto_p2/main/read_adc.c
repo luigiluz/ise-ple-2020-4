@@ -72,19 +72,29 @@ uart_msg_t build_adc_uart_msg(uint16_t adc_value)
     return uart_msg;
 }
 
+display_msg_t build_adc_display_msg(uint32_t adc_value)
+{
+    display_msg_t display_msg;
+    static char adc_value_str[ADC_DISPLAY_MSG_LEN];
+
+    sprintf(adc_value_str, "%d", adc_value);
+
+    display_msg.tsk_id = READ_ADC_TASK_ID;
+    display_msg.cursor_row = ADC_DISPLAY_MSG_CURSOR_ROW;
+    display_msg.cursor_col = ADC_DISPLAY_MSG_CURSOR_COL;
+    display_msg.msg_len = ADC_DISPLAY_MSG_LEN;
+    strncpy(display_msg.msg, adc_value_str, ADC_DISPLAY_MSG_LEN);
+
+    return display_msg;
+}
+
 void read_adc_task()
 {
     uint16_t adc_data[ADC_BUFFER_SIZE];
     uint32_t mean_adc_value;
     static int i = 0;
-    display_params params;
+    display_msg_t display_msg;
     uart_msg_t uart_msg;
-    char mean_adc_value_str[ADC_DISPLAY_MSG_LEN];
-
-    params.tsk_id = READ_ADC_TASK_ID;
-    params.cursor_row = ADC_DISPLAY_MSG_CURSOR_ROW;
-    params.cursor_col = ADC_DISPLAY_MSG_CURSOR_COL;
-    params.msg_len = ADC_DISPLAY_MSG_LEN;
 
     ESP_LOGI(TAG, "Initialize hw_timer for callback");
     hw_timer_init(hw_timer_callback, NULL);
@@ -104,11 +114,10 @@ void read_adc_task()
             mean_adc_value = get_mean_adc_value(adc_data);
             mean_adc_value = convert_adc_value(mean_adc_value);
 
-            sprintf(mean_adc_value_str, "%d", mean_adc_value);
-            
-            strncpy(params.msg, mean_adc_value_str, ADC_DISPLAY_MSG_LEN);
+            ESP_LOGI(TAG, "mean_adc_value: %d", mean_adc_value);
 
-            BaseType_t DisplaySendReturn = display_append_to_message_queue(&params);
+            display_msg = build_adc_display_msg(mean_adc_value);
+            BaseType_t DisplaySendReturn = display_append_to_message_queue(&display_msg);
             if (DisplaySendReturn != pdTRUE) {
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila do display");
             }

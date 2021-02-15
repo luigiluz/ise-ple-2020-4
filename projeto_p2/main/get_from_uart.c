@@ -71,7 +71,7 @@ void get_char_key_from_token(char *json_msg, jsmntok_t *token, int token_number,
     }
 }
 
-int parse_json_to_display_msg(char *temp, jsmntok_t *token, display_params *params)
+int parse_json_to_display_msg(char *temp, jsmntok_t *token, display_msg_t *display_msg)
 {
     int msg_key_ret;
     int ret;
@@ -90,22 +90,32 @@ int parse_json_to_display_msg(char *temp, jsmntok_t *token, display_params *para
     ESP_LOGI(TAG, "msg_key_ret: %d", msg_key_ret);
     get_char_key_from_token(temp, token, JSMN_MSG_VALUE_INDEX, msg_value);
 
-    strncpy(params->msg, msg_value, UART_DISPLAY_MSG_LEN);
+    strncpy(display_msg->msg, msg_value, UART_DISPLAY_MSG_LEN);
     ESP_LOGI(TAG, "msg_value: %s", msg_value);
-    ESP_LOGI(TAG, "msg: %s", params->msg);
+    ESP_LOGI(TAG, "msg: %s", display_msg->msg);
 
     ret = 0;
 
     return ret;
 }
 
+int build_uart_display_msg(char *temp, jsmntok_t *token, display_msg_t *display_msg)
+{
+    int ret;
+
+    display_msg->tsk_id = GET_FROM_UART_TASK_ID;
+    display_msg->cursor_row = UART_DISPLAY_MSG_CURSOR_ROW;
+    display_msg->cursor_col = UART_DISPLAY_MSG_CURSOR_COL;
+    display_msg->msg_len = UART_DISPLAY_MSG_LEN;
+
+    ret = parse_json_to_display_msg(temp, token, display_msg);
+
+    return ret;
+}
+
 void get_from_uart_task(void *pvParameters)
 {
-    display_params params;
-    params.tsk_id = GET_FROM_UART_TASK_ID;
-    params.cursor_row = UART_DISPLAY_MSG_CURSOR_ROW;
-    params.cursor_col = UART_DISPLAY_MSG_CURSOR_COL;
-    params.msg_len = UART_DISPLAY_MSG_LEN;
+    display_msg_t display_msg;
     // Configure a temporary buffer for the incoming data
     uint8_t *data = (uint8_t *) malloc(BUF_SIZE);
     char temp[64];
@@ -127,10 +137,10 @@ void get_from_uart_task(void *pvParameters)
             
             if (ret == JSMN_PARSER_EXPECTED_RETURN) {
                 ESP_LOGI(TAG, "json com tamanho correto");
-                ret = parse_json_to_display_msg(temp, token, &params);
+                ret = build_uart_display_msg(temp, token, &display_msg);
 
                 if (ret == 0) {
-                    BaseType_t DisplaySendReturn = display_append_to_message_queue(&params);
+                    BaseType_t DisplaySendReturn = display_append_to_message_queue(&display_msg);
                     if (DisplaySendReturn != pdTRUE) {
                         ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila do display");
                     }
