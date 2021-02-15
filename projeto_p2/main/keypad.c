@@ -59,23 +59,6 @@ volatile int timeout_flag = 0;
 static QueueHandle_t keypad_mq_handle;
 
 /*
- * @brief: Callback a ser executada pelo hardware timer
- * A cada segundo ela incrementa um no contador de segundos "second_counter",
- * o contador reseta quando a contagem atinge o valor predefinido como TIMEOUT.
- * Quando a contagem atinge o valor de timeout, uma "timeout_flag" vai para nivel
- * alto para indicar esse evento
- */
-// void hw_timer_callback(void *arg)
-// {
-// 	seconds_counter = seconds_counter + 1;
-
-// 	if (seconds_counter == TIMEOUT) {
-// 		seconds_counter = 0;
-// 		timeout_flag = 1;
-// 	}
-// }
-
-/*
  * @brief: Inicializa os pinos GPIO a serem utilizados pelo display
  *
  */
@@ -101,25 +84,9 @@ void init_gpio(void)
     gpio_config(&input_conf);
 }
 
-// void init_hw_timer(void)
-// {
-// 	ESP_LOGI(TAG, "Configurando hardware timer");
-//     /* Configura o hardware timer para emitir alarmes a cada 1 segundo */
-//     hw_timer_init(hw_timer_callback, (void *)seconds_counter);
-//     hw_timer_alarm_us(HWTIMER_INT_TIME, TEST_RELOAD);
-// }
-
-// void init_queue(void)
-// {
-// 	if (keypad_mq_handle == NULL)
-// 		keypad_mq_handle = xQueueCreate(1, BUFFER_SIZE * sizeof(char));
-// }
-
 void keypad_init(void)
 {
 	init_gpio();
-	//init_hw_timer();
-	//init_queue();
 }
 
 BaseType_t keypad_read_from_queue(char *receive_buffer)
@@ -227,7 +194,6 @@ void keypad_task(void *pvParameters)
 	params.msg_len = KEYPAD_DISPLAY_MSG_LEN;
 
 	while(1) {
-		// ESP_LOGI(TAG, "Executando a keypad_task");
 		char keys_buffer[BUFFER_SIZE];
     	char read_cols[KEYPAD_COLS];
     	char pr_key;
@@ -290,29 +256,9 @@ void keypad_task(void *pvParameters)
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila da uart");
             }
 
-			// if (keypad_mq_handle) {
-			// 	xQueueSend(keypad_mq_handle, keys_buffer, portMAX_DELAY);
-			// 	ESP_LOGI(TAG, "keys_buffer enviado pela queue");
-			// } else {
-			// 	ESP_LOGI(TAG, "keypad_mq_handle nao inicializada");
-			// }
-
 			buffer_index = 0;
 			seconds_counter = 0;
 		}
 		vTaskDelay(pdMS_TO_TICKS(300));
-
-		// /* Avisa do tempo restante */
-		// if (seconds_counter == TIMEOUT - TIMER_ALERT) {
-		// 	ESP_LOGI(TAG, "Restam apenas %d segundos!", TIMER_ALERT);
-		// }
-
-		// /* Reinicia o buffer quando ocorre um timeout */
-		// if (timeout_flag) {
-		// 	buffer_index = 0;
-		// 	timeout_flag = 0;
-		// 	ESP_LOGI(TAG, "O tempo foi esgotado!"); 
-		// 	ESP_LOGI(TAG, "Voce tem %d segundos para cadastrar uma nova senha...", TIMEOUT);
-		// }	
 	}
 }
