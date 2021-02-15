@@ -15,17 +15,6 @@
 
 static const char *TAG = "SEND_TO_UART";
 
-/**
- * This is an example which echos any data it receives on UART0 back to the sender,
- * with hardware flow control turned off. It does not use UART driver event queue.
- *
- * - Port: UART0
- * - Receive (Rx) buffer: on
- * - Transmit (Tx) buffer: off
- * - Flow control: off
- * - Event queue: off
- */
-
 #define BUF_SIZE (1024)
 
 static QueueHandle_t SendToUartQueueHandle = NULL;
@@ -70,8 +59,6 @@ BaseType_t append_to_send_to_uart_queue(uart_msg *msg)
 
 void uart_init(void)
 {
-    // Configure parameters of an UART driver,
-    // communication pins and install the driver
     uart_config_t uart_config = {
         .baud_rate = 74880,
         .data_bits = UART_DATA_8_BITS,
@@ -89,13 +76,9 @@ void send_to_uart_task(void *pvParameters)
     uart_msg received_msg;
 
     while(1) {
-        // ESP_LOGI(TAG, "Executando a send_to_uart_task");
         SendToUartQueueReturn = xQueueReceive(SendToUartQueueHandle, (void *)&received_msg, portMAX_DELAY);
 
         if (SendToUartQueueReturn == pdPASS) {
-            //ESP_LOGI(TAG, "informacao lida da queue da send_to_uart");
-
-            //sprintf(json_receive_buffer, "{ \"key_1\": \"%c\", \"key_2\": \"%c\" }\n", receive_buffer[0], receive_buffer[1]);
             uart_write_bytes(UART_NUM_0, (const char *) received_msg.msg, received_msg.msg_len);
         }
         
