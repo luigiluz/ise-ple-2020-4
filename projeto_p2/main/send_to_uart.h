@@ -4,14 +4,14 @@
 typedef struct {
     char *msg;
     uint32_t msg_len;
-} uart_msg;
+} uart_msg_t;
 
 /* This function is used to init UART for both send_to_uart_task and get_from_uart_task */
 extern void uart_init(void);
 
 extern void send_to_uart_message_queue_init(void);
 
-extern BaseType_t send_to_uart_append_to_message_queue(uart_msg *msg);
+extern BaseType_t send_to_uart_append_to_message_queue(uart_msg_t *uart_msg);
 
 extern void send_to_uart_task(void *pvParameters);
 

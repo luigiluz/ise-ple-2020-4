@@ -174,6 +174,21 @@ char get_key_from_keypad(char read_columns[KEYPAD_COLS])
 	return pressed_key;
 }
 
+uart_msg_t build_keypad_uart_msg(char *keys_buffer)
+{
+	uart_msg_t uart_msg;
+	static char keypad_json_msg[60];
+
+	sprintf(keypad_json_msg,
+		"{ \"key_0\": \"%c\", \"key_1\": \"%c\", \"key_2\": \"%c\", \"key_3\": \"%c\" }\n",
+		keys_buffer[0], keys_buffer[1], keys_buffer[2], keys_buffer[3]);
+	
+	uart_msg.msg = keypad_json_msg;
+	uart_msg.msg_len = sizeof(keypad_json_msg) / sizeof(keypad_json_msg[0]);
+
+	return uart_msg;
+}
+
 void keypad_task(void *pvParameters)
 {
 	display_params params;
@@ -190,8 +205,7 @@ void keypad_task(void *pvParameters)
     	int output_sequence;
    		int i;
 		static int buffer_index = 0;
-		char keypad_json_msg[60];
-		uart_msg uart;
+		uart_msg_t uart_msg;
 
 		vTaskDelay(600 / portTICK_RATE_MS);
 	
@@ -230,14 +244,9 @@ void keypad_task(void *pvParameters)
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila do display");
             }
 
-			sprintf(keypad_json_msg,
-					"{ \"key_0\": \"%c\", \"key_1\": \"%c\", \"key_2\": \"%c\", \"key_3\": \"%c\" }\n",
-					keys_buffer[0], keys_buffer[1], keys_buffer[2], keys_buffer[3]);
-			
-			uart.msg = keypad_json_msg;
-			uart.msg_len = sizeof(keypad_json_msg) / sizeof(keypad_json_msg[0]);
+			uart_msg = build_keypad_uart_msg(keys_buffer);
 
-			BaseType_t SendToUartReturn = send_to_uart_append_to_message_queue(&uart);
+			BaseType_t SendToUartReturn = send_to_uart_append_to_message_queue(&uart_msg);
             if (SendToUartReturn != pdTRUE) {
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila da uart");
             }

@@ -39,10 +39,10 @@ void send_to_uart_semphr_give(void)
 void send_to_uart_message_queue_init(void)
 {
 	if (SendToUartQueueHandle == NULL)
-		SendToUartQueueHandle = xQueueCreate(10, sizeof(uart_msg));
+		SendToUartQueueHandle = xQueueCreate(10, sizeof(uart_msg_t));
 };
 
-BaseType_t send_to_uart_append_to_message_queue(uart_msg *msg)
+BaseType_t send_to_uart_append_to_message_queue(uart_msg_t *msg)
 {
 	BaseType_t SendToUartQueueReturn = errQUEUE_FULL;
 
@@ -73,7 +73,7 @@ void uart_init(void)
 void send_to_uart_task(void *pvParameters)
 {
     BaseType_t SendToUartQueueReturn;
-    uart_msg received_msg;
+    uart_msg_t received_msg;
 
     while(1) {
         SendToUartQueueReturn = xQueueReceive(SendToUartQueueHandle, (void *)&received_msg, portMAX_DELAY);

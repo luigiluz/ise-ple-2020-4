@@ -23,7 +23,6 @@ static const char *TAG = "READ_ADC";
 #define ADC_DISPLAY_MSG_CURSOR_COL  0
 #define ADC_DISPLAY_MSG_LEN         3
 
-
 static uint8_t timer_flag = 0;
 
 void read_adc_init()
@@ -60,20 +59,32 @@ void hw_timer_callback(void *arg)
     timer_flag = 1;
 }
 
+uart_msg_t build_adc_uart_msg(uint16_t adc_value)
+{
+    uart_msg_t uart_msg;
+    static char adc_json_msg[19];
+
+    sprintf(adc_json_msg, "{ \"ADC\": \"0x%02X\" }\n", adc_value & 0xFF);
+    
+    uart_msg.msg = adc_json_msg;
+    uart_msg.msg_len = sizeof(adc_json_msg) / sizeof(adc_json_msg[0]);
+
+    return uart_msg;
+}
+
 void read_adc_task()
 {
     uint16_t adc_data[ADC_BUFFER_SIZE];
     uint32_t mean_adc_value;
     static int i = 0;
     display_params params;
-    uart_msg uart;
-    char adc_json_msg[19];
+    uart_msg_t uart_msg;
     char mean_adc_value_str[ADC_DISPLAY_MSG_LEN];
 
-	params.tsk_id = READ_ADC_TASK_ID;
-	params.cursor_row = ADC_DISPLAY_MSG_CURSOR_ROW;
-	params.cursor_col = ADC_DISPLAY_MSG_CURSOR_COL;
-	params.msg_len = ADC_DISPLAY_MSG_LEN;
+    params.tsk_id = READ_ADC_TASK_ID;
+    params.cursor_row = ADC_DISPLAY_MSG_CURSOR_ROW;
+    params.cursor_col = ADC_DISPLAY_MSG_CURSOR_COL;
+    params.msg_len = ADC_DISPLAY_MSG_LEN;
 
     ESP_LOGI(TAG, "Initialize hw_timer for callback");
     hw_timer_init(hw_timer_callback, NULL);
@@ -102,12 +113,9 @@ void read_adc_task()
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila do display");
             }
 
-            sprintf(adc_json_msg, "{ \"ADC\": \"0x%02X\" }\n", mean_adc_value & 0xFF);
-			
-			uart.msg = adc_json_msg;
-			uart.msg_len = sizeof(adc_json_msg) / sizeof(adc_json_msg[0]);
+            uart_msg = build_adc_uart_msg(mean_adc_value);
 
-			BaseType_t SendToUartReturn = send_to_uart_append_to_message_queue(&uart);
+            BaseType_t SendToUartReturn = send_to_uart_append_to_message_queue(&uart_msg);
             if (SendToUartReturn != pdTRUE) {
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila da uart");
             }
