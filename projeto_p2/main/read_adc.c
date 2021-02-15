@@ -23,19 +23,15 @@ static const char *TAG = "READ_ADC";
 #define ADC_DISPLAY_MSG_CURSOR_COL  0
 #define ADC_DISPLAY_MSG_LEN         3
 
-// TaskHandle_t AdcTimerHandle;
 
 static uint8_t timer_flag = 0;
 
 void read_adc_init()
 {
-    // 1. init adc
     adc_config_t adc_config;
 
-    // Depend on menuconfig->Component config->PHY->vdd33_const value
-    // When measuring system voltage(ADC_READ_VDD_MODE), vdd33_const must be set to 255.
     adc_config.mode = ADC_READ_TOUT_MODE;
-    adc_config.clk_div = 8; // ADC sample collection clock = 80MHz/clk_div = 10MHz
+    adc_config.clk_div = 8;
     ESP_ERROR_CHECK(adc_init(&adc_config));
 }
 
@@ -58,11 +54,6 @@ uint32_t convert_adc_value(uint32_t adc_value)
 {
     return (adc_value * 255) / 1023;
 }
-
-// void adc_timer_callback(TimerHandle_t xTimer)
-// {
-//     timer_flag = 1;
-// }
 
 void hw_timer_callback(void *arg)
 {
@@ -89,14 +80,7 @@ void read_adc_task()
     ESP_LOGI(TAG, "Set hw_timer timing time %d useg with reload", ADC_SAMPLING_TIME);
     hw_timer_alarm_us(ADC_SAMPLING_TIME, pdTRUE);
 
-    // AdcTimerHandle = xTimerCreate("AdcTimer", pdMS_TO_TICKS(ADC_SAMPLING_TIME), pdTRUE, 0, adc_timer_callback);
-    // if (AdcTimerHandle != NULL) {
-    //     ESP_LOGI(TAG, "AdcTimer criado com sucesso");
-    //     xTimerStart(AdcTimerHandle, 0);
-    // }
-
     while (1) {
-        // ESP_LOGI(TAG, "Executando a read_adc_task");
         if (timer_flag) {
             if (ESP_OK == adc_read_fast(&adc_data[i], 1)) {
                 //ESP_LOGI(TAG, "adc_data[%d] = %d", i, adc_data[i]);
@@ -104,7 +88,6 @@ void read_adc_task()
             } else {
                 ESP_LOGI(TAG, "leitura do adc falhou");
             }
-            //ESP_LOGI(TAG, "i = %d", i);
             i++;
             timer_flag = 0;
         }
@@ -119,7 +102,6 @@ void read_adc_task()
 
             BaseType_t DisplaySendReturn = send_to_display_message_queue(&params);
             if (DisplaySendReturn == pdTRUE) {
-                // ESP_LOGI(TAG, "Mensagem enviada pela fila com sucesso");
             } else {
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila");
             }
