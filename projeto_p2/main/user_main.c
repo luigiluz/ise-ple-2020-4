@@ -88,7 +88,7 @@ void app_main(void)
         ESP_LOGI(TAG, "SendToUartTask nao foi inicializada");
     }
 
-    xDisplayReturned = xTaskCreate(display_task, "DisplayTask", 1024, NULL, 1, &xDisplayHandle);
+    xDisplayReturned = xTaskCreate(display_task, "DisplayTask", 2*1024 + 256, NULL, 1, &xDisplayHandle);
     if (xDisplayReturned == pdPASS) {
         ESP_LOGI(TAG, "DisplayTask foi criada com sucesso");
     } else {

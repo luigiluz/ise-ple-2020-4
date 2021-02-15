@@ -15,6 +15,8 @@
 static const char *TAG = "DISPLAY";
 
 #define DISPLAY_ADDRESS     0x27
+#define DISPLAY_N_OF_ROWS   16
+#define DISPLAY_N_OF_COLS   2
 
 static QueueHandle_t DisplayMessageQueueHandle = NULL;
 static SemaphoreHandle_t DisplaySemphrHandle = NULL;
@@ -56,9 +58,64 @@ BaseType_t display_append_to_message_queue(display_msg_t *display_msg)
 	return DisplayQueueReturn;
 }
 
+void update_display(display_msg_t display_msg)
+{
+    static uint8_t curr_msg_len, prev_msg_len;
+    static uint8_t uart_msg_len, prev_uart_msg_len;
+    static uint8_t adc_msg_len, prev_adc_msg_len;
+    static uint8_t update_flag;
+    uint8_t k;
+
+    uart_msg_len = 1;
+    adc_msg_len = 1;
+
+    update_flag = 0;
+    
+    switch(display_msg.tsk_id) {
+    case GET_FROM_UART_TASK_ID:
+        for (k = 0; k < display_msg.msg_len; k++) {
+            if (display_msg.msg[k] == '\0')
+                break;
+            uart_msg_len++;
+        }
+        curr_msg_len = uart_msg_len;
+        prev_msg_len = prev_uart_msg_len;
+        prev_uart_msg_len = uart_msg_len;
+        update_flag = 1;
+        break;
+
+    case READ_ADC_TASK_ID:
+        for (k = 0; k < display_msg.msg_len; k++) {
+            if (display_msg.msg[k] == '\0')
+                break;
+            adc_msg_len++;
+        }
+        curr_msg_len = adc_msg_len;
+        prev_msg_len = prev_adc_msg_len;
+        prev_adc_msg_len = adc_msg_len;
+        update_flag = 1;
+        break;
+
+    case KEYPAD_TASK_ID:
+    default:
+        break;
+    }
+
+    if (update_flag) {
+        /* Clean display characters if current msg is shorter than the previous one */
+        if (curr_msg_len < prev_msg_len) {
+            for (k = 0; k < display_msg.msg_len; k++) {
+                writeLCD(' ');
+            }
+        }
+    }
+
+    setCursor(display_msg.cursor_col, display_msg.cursor_row);
+}
+
 void display_task(void *pvParameters)
 {
-    LiquidCrystal_I2C(DISPLAY_ADDRESS, 16, 2);
+    LiquidCrystal_I2C(DISPLAY_ADDRESS, DISPLAY_N_OF_ROWS, DISPLAY_N_OF_COLS);
     init();
     init();
     backlight();
@@ -66,32 +123,13 @@ void display_task(void *pvParameters)
     while(1) {
         BaseType_t GetFromDisplayQueueReturn;
         display_msg_t display_msg;
-        static uint16_t prev_msg_len = 0;
 
         GetFromDisplayQueueReturn = xQueueReceive(DisplayMessageQueueHandle, (void *)&display_msg, pdMS_TO_TICKS(100));
 
         if (GetFromDisplayQueueReturn == pdPASS) {
             setCursor(display_msg.cursor_col, display_msg.cursor_row);
 
-            if (display_msg.tsk_id == GET_FROM_UART_TASK_ID) {
-                uint16_t msg_len = 1;
-                /* Routine to get the msg_len */
-                for (int k = 0; k < display_msg.msg_len; k++) {
-                    if(display_msg.msg[k] == '\0')
-                        break;
-
-                    msg_len++;
-                }
-
-                /* Clean display characters if current msg is shorter than the previous one */
-                if (msg_len < prev_msg_len) {
-                    for (int i = 0; i < display_msg.msg_len; i++) {
-                        writeLCD(' ');
-                    }
-                }
-                setCursor(display_msg.cursor_col, display_msg.cursor_row);
-                prev_msg_len = msg_len;
-            }
+            update_display(display_msg);
 
             for (int i=0; i < display_msg.msg_len; i++) {
                 if (display_msg.msg[i] == '\0')
