@@ -51,9 +51,9 @@ BaseType_t send_to_display_message_queue(display_params *params_to_send)
         DisplayQueueReturn = xQueueSend(DisplayMessageQueueHandle, (void *)params_to_send, portMAX_DELAY);
     }
 
-	return DisplayQueueReturn;
-
     display_semphr_give();
+
+	return DisplayQueueReturn;
 }
 
 void display_task(void *pvParameters)
