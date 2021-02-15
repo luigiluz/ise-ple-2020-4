@@ -68,10 +68,10 @@ void app_main(void)
     ESP_LOGI(TAG, "Inicio da aplicacao");
 	keypad_init();
     uart_init();
-    init_display_message_queue();
+    display_message_queue_init();
     read_adc_init();
     init_send_to_uart_queue();
-    init_display_semph();
+    display_semph_init();
     init_send_to_uart_semph();
 	
     xKeypadReturned = xTaskCreate(keypad_task, "KeypadTask", 1024 + 256, NULL, 1, &xKeypadHandle);

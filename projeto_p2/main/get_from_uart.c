@@ -131,7 +131,7 @@ void get_from_uart_task(void *pvParameters)
 
                 if (ret == 0) {
 
-                    BaseType_t DisplaySendReturn = send_to_display_message_queue(&params);
+                    BaseType_t DisplaySendReturn = display_append_to_message_queue(&params);
                     if (DisplaySendReturn == pdTRUE) {
                         ESP_LOGI(TAG, "Mensagem enviada pela fila com sucesso");
                     } else {

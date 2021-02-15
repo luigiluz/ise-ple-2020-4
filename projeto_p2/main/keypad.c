@@ -235,7 +235,7 @@ void keypad_task(void *pvParameters)
 			tmp_keys_buffer[BUFFER_SIZE] = '\0';
 			strncpy(params.msg, tmp_keys_buffer, BUFFER_SIZE);
 
-            BaseType_t DisplaySendReturn = send_to_display_message_queue(&params);
+            BaseType_t DisplaySendReturn = display_append_to_message_queue(&params);
             if (DisplaySendReturn == pdTRUE) {
                 ESP_LOGI(TAG, "Mensagem enviada pela fila do display com sucesso");
             } else {

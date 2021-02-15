@@ -19,7 +19,7 @@ static const char *TAG = "DISPLAY";
 static QueueHandle_t DisplayMessageQueueHandle = NULL;
 static SemaphoreHandle_t DisplaySemphrHandle = NULL;
 
-void init_display_semph(void)
+void display_semph_init(void)
 {
     if (DisplaySemphrHandle == NULL)
         DisplaySemphrHandle = xSemaphoreCreateMutex();
@@ -35,13 +35,13 @@ void display_semphr_give(void)
     xSemaphoreGive(DisplaySemphrHandle);
 }
 
-void init_display_message_queue(void)
+void display_message_queue_init(void)
 {
 	if (DisplayMessageQueueHandle == NULL)
 		DisplayMessageQueueHandle = xQueueCreate(2, sizeof(display_params));
 }
 
-BaseType_t send_to_display_message_queue(display_params *params_to_send)
+BaseType_t display_append_to_message_queue(display_params *params_to_send)
 {
     display_semphr_take();
 

@@ -19,12 +19,12 @@ typedef struct {
     uint16_t msg_len;
 } display_params;
 
-extern void init_display_message_queue(void);
+extern void display_message_queue_init(void);
 
 extern void display_task(void *pvParameters);
 
-extern BaseType_t send_to_display_message_queue(display_params *params_to_send);
+extern BaseType_t display_append_to_message_queue(display_params *params_to_send);
 
-extern void init_display_semph(void);
+extern void display_semph_init(void);
 
 #endif

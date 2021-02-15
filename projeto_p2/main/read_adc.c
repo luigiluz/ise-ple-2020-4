@@ -100,7 +100,7 @@ void read_adc_task()
             
             strncpy(params.msg, mean_adc_value_str, ADC_DISPLAY_MSG_LEN);
 
-            BaseType_t DisplaySendReturn = send_to_display_message_queue(&params);
+            BaseType_t DisplaySendReturn = display_append_to_message_queue(&params);
             if (DisplaySendReturn == pdTRUE) {
             } else {
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila");
