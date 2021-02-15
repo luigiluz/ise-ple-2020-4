@@ -82,7 +82,7 @@ void read_adc_task()
 
     while (1) {
         if (timer_flag) {
-            if (ESP_OK == adc_read_fast(&adc_data[i], 1)) {
+            if (ESP_OK == adc_read(&adc_data[i])) {
                 //ESP_LOGI(TAG, "adc_data[%d] = %d", i, adc_data[i]);
                 // ESP_LOGI(TAG, "adc read: %d", adc_data[i]);
             } else {
