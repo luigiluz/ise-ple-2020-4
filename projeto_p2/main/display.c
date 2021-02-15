@@ -71,13 +71,6 @@ void display_task(void *pvParameters)
         GetFromDisplayQueueReturn = xQueueReceive(DisplayMessageQueueHandle, (void *)&params, pdMS_TO_TICKS(100));
 
         if (GetFromDisplayQueueReturn == pdPASS) {
-            //clear();
-            // ESP_LOGI(TAG, "Mensagem recebida na fila do display");
-            // ESP_LOGI(TAG, "params.cursor_row: %d", params.cursor_row);
-            // ESP_LOGI(TAG, "params.cursor_col: %d", params.cursor_col);
-            // ESP_LOGI(TAG, "params.msg: %s", params.msg);
-            // ESP_LOGI(TAG, "params.msg_len: %d", params.msg_len);
-
             setCursor(params.cursor_col, params.cursor_row);
 
             if (params.tsk_id == GET_FROM_UART_TASK_ID) {
