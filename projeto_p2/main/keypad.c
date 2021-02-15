@@ -56,8 +56,6 @@ char keypad_keys[KEYPAD_ROWS][KEYPAD_COLS] =
 volatile int seconds_counter = 0;
 volatile int timeout_flag = 0;
 
-static QueueHandle_t keypad_mq_handle;
-
 /*
  * @brief: Inicializa os pinos GPIO a serem utilizados pelo display
  *
@@ -87,14 +85,6 @@ void init_gpio(void)
 void keypad_init(void)
 {
 	init_gpio();
-}
-
-BaseType_t keypad_read_from_queue(char *receive_buffer)
-{
-	BaseType_t KeypadQueueReturn;
-	KeypadQueueReturn = xQueueReceive(keypad_mq_handle, receive_buffer, 0);
-
-	return KeypadQueueReturn;
 }
 
 /*
