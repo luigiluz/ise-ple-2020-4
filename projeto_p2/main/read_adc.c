@@ -82,11 +82,8 @@ void read_adc_task()
 
     while (1) {
         if (timer_flag) {
-            if (ESP_OK == adc_read(&adc_data[i])) {
-                //ESP_LOGI(TAG, "adc_data[%d] = %d", i, adc_data[i]);
-                // ESP_LOGI(TAG, "adc read: %d", adc_data[i]);
-            } else {
-                ESP_LOGI(TAG, "leitura do adc falhou");
+            if (adc_read(&adc_data[i]) != ESP_OK) {
+                ESP_LOGI(TAG, "Leitura do adc falhou");
             }
             i++;
             timer_flag = 0;
@@ -101,9 +98,8 @@ void read_adc_task()
             strncpy(params.msg, mean_adc_value_str, ADC_DISPLAY_MSG_LEN);
 
             BaseType_t DisplaySendReturn = display_append_to_message_queue(&params);
-            if (DisplaySendReturn == pdTRUE) {
-            } else {
-                ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila");
+            if (DisplaySendReturn != pdTRUE) {
+                ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila do display");
             }
 
             sprintf(adc_json_msg, "{ \"ADC\": \"0x%02X\" }\n", mean_adc_value & 0xFF);
@@ -112,9 +108,7 @@ void read_adc_task()
 			uart.msg_len = sizeof(adc_json_msg) / sizeof(adc_json_msg[0]);
 
 			BaseType_t SendToUartReturn = send_to_uart_append_to_message_queue(&uart);
-            if (SendToUartReturn == pdTRUE) {
-                ESP_LOGI(TAG, "Mensagem enviada pela fila da uart com sucesso");
-            } else {
+            if (SendToUartReturn != pdTRUE) {
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila da uart");
             }
 
