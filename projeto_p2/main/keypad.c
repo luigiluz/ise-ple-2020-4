@@ -239,7 +239,7 @@ void keypad_task(void *pvParameters)
 			uart.msg = keypad_json_msg;
 			uart.msg_len = sizeof(keypad_json_msg) / sizeof(keypad_json_msg[0]);
 
-			BaseType_t SendToUartReturn = append_to_send_to_uart_queue(&uart);
+			BaseType_t SendToUartReturn = send_to_uart_append_to_message_queue(&uart);
             if (SendToUartReturn == pdTRUE) {
                 ESP_LOGI(TAG, "Mensagem enviada pela fila da uart com sucesso");
             } else {

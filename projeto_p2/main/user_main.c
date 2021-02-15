@@ -70,9 +70,9 @@ void app_main(void)
     uart_init();
     display_message_queue_init();
     read_adc_init();
-    init_send_to_uart_queue();
+    send_to_uart_message_queue_init();
     display_semph_init();
-    init_send_to_uart_semph();
+    send_to_uart_semph_init();
 	
     xKeypadReturned = xTaskCreate(keypad_task, "KeypadTask", 1024 + 256, NULL, 1, &xKeypadHandle);
     if (xKeypadReturned == pdPASS) {

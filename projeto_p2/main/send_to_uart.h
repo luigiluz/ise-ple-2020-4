@@ -9,12 +9,12 @@ typedef struct {
 /* This function is used to init UART for both send_to_uart_task and get_from_uart_task */
 extern void uart_init(void);
 
-extern void init_send_to_uart_queue(void);
+extern void send_to_uart_message_queue_init(void);
 
-extern BaseType_t append_to_send_to_uart_queue(uart_msg *msg);
+extern BaseType_t send_to_uart_append_to_message_queue(uart_msg *msg);
 
 extern void send_to_uart_task(void *pvParameters);
 
-extern void init_send_to_uart_semph(void);
+extern void send_to_uart_semph_init(void);
 
 #endif

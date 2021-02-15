@@ -20,7 +20,7 @@ static const char *TAG = "SEND_TO_UART";
 static QueueHandle_t SendToUartQueueHandle = NULL;
 static SemaphoreHandle_t SendToUartSemphrHandle = NULL;
 
-void init_send_to_uart_semph(void)
+void send_to_uart_semph_init(void)
 {
     if (SendToUartSemphrHandle == NULL)
         SendToUartSemphrHandle = xSemaphoreCreateMutex();
@@ -36,13 +36,13 @@ void send_to_uart_semphr_give(void)
     xSemaphoreGive(SendToUartSemphrHandle);
 }
 
-void init_send_to_uart_queue(void)
+void send_to_uart_message_queue_init(void)
 {
 	if (SendToUartQueueHandle == NULL)
 		SendToUartQueueHandle = xQueueCreate(10, sizeof(uart_msg));
 };
 
-BaseType_t append_to_send_to_uart_queue(uart_msg *msg)
+BaseType_t send_to_uart_append_to_message_queue(uart_msg *msg)
 {
 	BaseType_t SendToUartQueueReturn = errQUEUE_FULL;
 

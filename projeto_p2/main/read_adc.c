@@ -111,7 +111,7 @@ void read_adc_task()
 			uart.msg = adc_json_msg;
 			uart.msg_len = sizeof(adc_json_msg) / sizeof(adc_json_msg[0]);
 
-			BaseType_t SendToUartReturn = append_to_send_to_uart_queue(&uart);
+			BaseType_t SendToUartReturn = send_to_uart_append_to_message_queue(&uart);
             if (SendToUartReturn == pdTRUE) {
                 ESP_LOGI(TAG, "Mensagem enviada pela fila da uart com sucesso");
             } else {
