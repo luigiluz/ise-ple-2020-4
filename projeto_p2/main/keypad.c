@@ -226,9 +226,7 @@ void keypad_task(void *pvParameters)
 			strncpy(params.msg, tmp_keys_buffer, BUFFER_SIZE);
 
             BaseType_t DisplaySendReturn = display_append_to_message_queue(&params);
-            if (DisplaySendReturn == pdTRUE) {
-                ESP_LOGI(TAG, "Mensagem enviada pela fila do display com sucesso");
-            } else {
+            if (DisplaySendReturn != pdTRUE) {
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila do display");
             }
 
@@ -240,9 +238,7 @@ void keypad_task(void *pvParameters)
 			uart.msg_len = sizeof(keypad_json_msg) / sizeof(keypad_json_msg[0]);
 
 			BaseType_t SendToUartReturn = send_to_uart_append_to_message_queue(&uart);
-            if (SendToUartReturn == pdTRUE) {
-                ESP_LOGI(TAG, "Mensagem enviada pela fila da uart com sucesso");
-            } else {
+            if (SendToUartReturn != pdTRUE) {
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila da uart");
             }
 
