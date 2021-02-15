@@ -269,16 +269,12 @@ void keypad_task(void *pvParameters)
 			tmp_keys_buffer[BUFFER_SIZE] = '\0';
 			strncpy(params.msg, tmp_keys_buffer, BUFFER_SIZE);
 
-			display_semphr_take();
-
             BaseType_t DisplaySendReturn = send_to_display_message_queue(&params);
             if (DisplaySendReturn == pdTRUE) {
                 ESP_LOGI(TAG, "Mensagem enviada pela fila do display com sucesso");
             } else {
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila do display");
             }
-
-			display_semphr_give();
 
 			sprintf(keypad_json_msg,
 					"{ \"key_0\": \"%c\", \"key_1\": \"%c\", \"key_2\": \"%c\", \"key_3\": \"%c\" }\n",

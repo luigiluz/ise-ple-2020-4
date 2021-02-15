@@ -27,8 +27,4 @@ extern BaseType_t send_to_display_message_queue(display_params *params_to_send);
 
 extern void init_display_semph(void);
 
-extern void display_semphr_take(void);
-
-extern void display_semphr_give(void);
-
 #endif

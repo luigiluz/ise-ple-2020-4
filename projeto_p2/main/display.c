@@ -43,6 +43,8 @@ void init_display_message_queue(void)
 
 BaseType_t send_to_display_message_queue(display_params *params_to_send)
 {
+    display_semphr_take();
+
 	BaseType_t DisplayQueueReturn = errQUEUE_FULL;
 
     if (DisplayMessageQueueHandle != NULL) {
@@ -50,6 +52,8 @@ BaseType_t send_to_display_message_queue(display_params *params_to_send)
     }
 
 	return DisplayQueueReturn;
+
+    display_semphr_give();
 }
 
 void display_task(void *pvParameters)

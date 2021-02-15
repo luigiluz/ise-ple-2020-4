@@ -117,16 +117,12 @@ void read_adc_task()
             
             strncpy(params.msg, mean_adc_value_str, ADC_DISPLAY_MSG_LEN);
 
-            display_semphr_take();
-
             BaseType_t DisplaySendReturn = send_to_display_message_queue(&params);
             if (DisplaySendReturn == pdTRUE) {
                 // ESP_LOGI(TAG, "Mensagem enviada pela fila com sucesso");
             } else {
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila");
             }
-
-            display_semphr_give();
 
             sprintf(adc_json_msg, "{ \"ADC\": \"0x%02X\" }\n", mean_adc_value & 0xFF);
 			
