@@ -114,8 +114,6 @@ void read_adc_task()
             mean_adc_value = get_mean_adc_value(adc_data);
             mean_adc_value = convert_adc_value(mean_adc_value);
 
-            ESP_LOGI(TAG, "mean_adc_value: %d", mean_adc_value);
-
             display_msg = build_adc_display_msg(mean_adc_value);
             BaseType_t DisplaySendReturn = display_append_to_message_queue(&display_msg);
             if (DisplaySendReturn != pdTRUE) {
