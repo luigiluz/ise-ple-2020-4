@@ -25,8 +25,6 @@ static const char *TAG = "GET_FROM_UART";
  * Dessa forma, o valor da chave "cursor" esta no token 2 e o valor da chave "msg" esta no token 4
  */
 #define JSMN_PARSER_EXPECTED_RETURN     3
-// #define JSMN_CURSOR_KEY_INDEX           1
-// #define JSMN_CURSOR_VALUE_INDEX         2
 #define JSMN_MSG_KEY_INDEX              1
 #define JSMN_MSG_VALUE_INDEX            2
 
@@ -38,23 +36,6 @@ static const char *TAG = "GET_FROM_UART";
 #define JSMN_CURSOR_KEY_LEN             sizeof(JSMN_CURSOR_KEY) / sizeof(char)
 #define JSMN_MSG_KEY                    "msg"
 #define JSMN_MSG_KEY_LEN                sizeof(JSMN_MSG_KEY) / sizeof(char)
-
-
-// static QueueHandle_t get_from_uart_mq_handle;
-
-// void get_from_uart_init_queue(void)
-// {
-// 	if (get_from_uart_mq_handle == NULL)
-// 		get_from_uart_mq_handle = xQueueCreate(1, sizeof(display_msg));
-// }
-
-// BaseType_t get_from_uart_read_queue(display_msg *received_msg)
-// {
-// 	BaseType_t GetFromUartQueueReturn;
-// 	GetFromUartQueueReturn = xQueueReceive(get_from_uart_mq_handle, received_msg, 0);
-
-// 	return GetFromUartQueueReturn;
-// }
 
 int get_int_key_from_token(char *json_msg, jsmntok_t *token, int token_number)
 {
@@ -93,26 +74,12 @@ void get_char_key_from_token(char *json_msg, jsmntok_t *token, int token_number,
 int parse_json_to_display_msg(char *temp, jsmntok_t *token, display_params *params)
 {
     int msg_key_ret;
-    // int cursor_key_ret;
-    // int cursor_value;
     int ret;
     char msg_value[UART_DISPLAY_MSG_LEN];
-    // char cursor_key[JSMN_CURSOR_KEY_LEN + 1];
     char msg_key[JSMN_MSG_KEY_LEN + 1];
 
-    // memset(cursor_key, '\0', JSMN_CURSOR_KEY_LEN + 1);
     memset(msg_key, '\0', JSMN_MSG_KEY_LEN + 1);
     memset(msg_value, '\0', UART_DISPLAY_MSG_LEN);
-
-    // get_char_key_from_token(temp, token, JSMN_CURSOR_KEY_INDEX, cursor_key);
-    // cursor_key_ret = strncmp(cursor_key, JSMN_CURSOR_KEY, JSMN_CURSOR_KEY_LEN + 1);
-    // ESP_LOGI(TAG, "cursor_key : %s", cursor_key);
-    // if (cursor_key_ret != 0) {
-    //     ret = -1;
-    //     return ret;
-    // }
-    // ESP_LOGI(TAG, "cursor_key_ret: %d", cursor_key_ret);
-    // cursor_value = get_int_key_from_token(temp, token, JSMN_CURSOR_VALUE_INDEX);
 
     get_char_key_from_token(temp, token, JSMN_MSG_KEY_INDEX, msg_key);
     msg_key_ret = strncmp(msg_key, JSMN_MSG_KEY, JSMN_MSG_KEY_LEN + 1);
@@ -123,10 +90,8 @@ int parse_json_to_display_msg(char *temp, jsmntok_t *token, display_params *para
     ESP_LOGI(TAG, "msg_key_ret: %d", msg_key_ret);
     get_char_key_from_token(temp, token, JSMN_MSG_VALUE_INDEX, msg_value);
 
-    // msg->cursor = cursor_value;
     strncpy(params->msg, msg_value, UART_DISPLAY_MSG_LEN);
     ESP_LOGI(TAG, "msg_value: %s", msg_value);
-    // ESP_LOGI(TAG, "cursor: %d", msg->cursor);
     ESP_LOGI(TAG, "msg: %s", params->msg);
 
     ret = 0;
