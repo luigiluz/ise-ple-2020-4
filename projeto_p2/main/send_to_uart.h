@@ -17,8 +17,4 @@ extern void send_to_uart_task(void *pvParameters);
 
 extern void init_send_to_uart_semph(void);
 
-extern void send_to_uart_semphr_take(void);
-
-extern void send_to_uart_semphr_give(void);
-
 #endif

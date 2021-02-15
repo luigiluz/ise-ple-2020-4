@@ -283,16 +283,12 @@ void keypad_task(void *pvParameters)
 			uart.msg = keypad_json_msg;
 			uart.msg_len = sizeof(keypad_json_msg) / sizeof(keypad_json_msg[0]);
 
-			send_to_uart_semphr_take();
-
 			BaseType_t SendToUartReturn = append_to_send_to_uart_queue(&uart);
             if (SendToUartReturn == pdTRUE) {
                 ESP_LOGI(TAG, "Mensagem enviada pela fila da uart com sucesso");
             } else {
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila da uart");
             }
-
-			send_to_uart_semphr_give();
 
 			// if (keypad_mq_handle) {
 			// 	xQueueSend(keypad_mq_handle, keys_buffer, portMAX_DELAY);

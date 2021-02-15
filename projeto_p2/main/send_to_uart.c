@@ -57,9 +57,13 @@ BaseType_t append_to_send_to_uart_queue(uart_msg *msg)
 {
 	BaseType_t SendToUartQueueReturn = errQUEUE_FULL;
 
+    send_to_uart_semphr_take();
+
     if (SendToUartQueueHandle != NULL) {
         SendToUartQueueReturn = xQueueSend(SendToUartQueueHandle, (void *)msg, portMAX_DELAY);
     }
+
+    send_to_uart_semphr_give();
 
     return SendToUartQueueReturn;
 }
