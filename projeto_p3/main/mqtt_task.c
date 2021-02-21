@@ -38,9 +38,9 @@ static const char *TAG = "MQTT_TASK";
 #define MQTT_PORT                   1883
 
 #define MQTT_INIT_TOPIC             "/mqtt_init_topic"
-#define READ_ADC_TOPIC              "/read_adc"
-#define KEYPAD_TOPIC                "/keypad"
-#define MQTT_TASK_TOPIC             "/mqtt_task"
+#define READ_ADC_TOPIC              "/application/read_adc"
+#define KEYPAD_TOPIC                "/application/keypad"
+#define MQTT_TASK_TOPIC             "/application/mqtt_task"
 
 #define MQTT_INIT_MSG               "Connection stablished"
 
@@ -143,8 +143,8 @@ void mqtt_semphr_give(void)
 void mqtt_task_message_queue_init(void)
 {
 	if (MQTTQueueHandle == NULL)
-		MQTTQueueHandle = xQueueCreate(10, sizeof(mqtt_msg_t));
-};
+		MQTTQueueHandle = xQueueCreate(5, sizeof(mqtt_msg_t));
+}
 
 BaseType_t mqtt_task_append_to_message_queue(mqtt_msg_t *msg)
 {
@@ -172,6 +172,9 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
             msg_id = esp_mqtt_client_publish(tmp_client, MQTT_INIT_TOPIC, MQTT_INIT_MSG, 0, 1, 0);
             ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
 
+            msg_id = esp_mqtt_client_subscribe(tmp_client, MQTT_TASK_TOPIC, 0);
+            ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", msg_id);
+
             // msg_id = esp_mqtt_client_subscribe(client, "/topic/qos0", 0);
             // ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
 
@@ -186,33 +189,7 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
             break;
 
         case MQTT_EVENT_SUBSCRIBED: {
-                display_msg_t display_msg;
-                jsmntok_t token[MAX_JSMN_TOKENS];
-                jsmn_parser parser;
-                int ret;
-
-                ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
-                msg_id = esp_mqtt_client_subscribe(tmp_client, MQTT_TASK_TOPIC, 1);
-
-                jsmn_init(&parser);
-                ret = jsmn_parse(&parser, event->data, strlen(event->data), token, MAX_JSMN_TOKENS);
-
-                if (ret != JSMN_PARSER_EXPECTED_RETURN)
-                    ESP_LOGI(TAG, "Mensagem com formato invalido");
-                
-                if (ret == JSMN_PARSER_EXPECTED_RETURN) {
-                    ESP_LOGI(TAG, "json com tamanho correto");
-                    ret = build_mqtt_display_msg(event->data, token, &display_msg);
-
-                    if (ret == 0) {
-                        BaseType_t DisplaySendReturn = display_append_to_message_queue(&display_msg);
-                        if (DisplaySendReturn != pdTRUE) {
-                            ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila do display");
-                        }
-                    }	
-                } else {
-                    ESP_LOGI(TAG, "Mensagem no formato invalido");
-                }
+            ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED");
             }
             break;
         // case MQTT_EVENT_UNSUBSCRIBED:
@@ -220,12 +197,38 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
         //     break;
         // case MQTT_EVENT_PUBLISHED:
         //     ESP_LOGI(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
-        //     break;
-        // case MQTT_EVENT_DATA:
-        //     ESP_LOGI(TAG, "MQTT_EVENT_DATA");
-        //     printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
-        //     printf("DATA=%.*s\r\n", event->data_len, event->data);
-        //     break;
+        //     break; 
+        case MQTT_EVENT_DATA: {
+            ESP_LOGI(TAG, "MQTT_EVENT_DATA");
+            ESP_LOGI(TAG, "event->data: %s", event->data);
+            display_msg_t display_msg;
+            jsmntok_t token[MAX_JSMN_TOKENS];
+            jsmn_parser parser;
+            int ret;
+            static char tmp_event_data[] = {};
+            jsmn_init(&parser);
+
+            strncpy(tmp_event_data, event->data, event->data_len);
+            tmp_event_data[event->data_len] = '\0';
+            ESP_LOGI(TAG, "received_msg: %s", tmp_event_data);
+            ret = jsmn_parse(&parser, tmp_event_data, strlen(tmp_event_data), token, MAX_JSMN_TOKENS);
+            if (ret != JSMN_PARSER_EXPECTED_RETURN)
+                ESP_LOGI(TAG, "Mensagem com formato invalido");
+            
+            if (ret == JSMN_PARSER_EXPECTED_RETURN) {
+                ESP_LOGI(TAG, "json com tamanho correto");
+                ret = build_mqtt_display_msg(tmp_event_data, token, &display_msg);
+                if (ret == 0) {
+                    BaseType_t DisplaySendReturn = display_append_to_message_queue(&display_msg);
+                    if (DisplaySendReturn != pdTRUE) {
+                        ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila do display");
+                    }
+                }	
+            }
+            // printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
+            // printf("DATA=%.*s\r\n", event->data_len, event->data);
+        }
+            break;
         case MQTT_EVENT_ERROR:
             ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
             break;
@@ -260,20 +263,18 @@ void mqtt_task(void *pvParameters)
 
     wifi_config_init();
     mqtt_app_start();
-    // set callback to process subscribed events
-    // this callback will only process subscribed events
-    // this will come in /msg topic
 
     while(1) {
         int msg_id;
-
         BaseType_t MQTTQueueReturn;
         mqtt_msg_t received_msg;
+        int32_t tmp_task_id;
 
-        MQTTQueueReturn = xQueueReceive(MQTTQueueHandle, (void *)&received_msg, portMAX_DELAY);
+        MQTTQueueReturn = xQueueReceive(MQTTQueueHandle, (void *)&received_msg, 100);
+        tmp_task_id = received_msg.tsk_id;
 
         if (MQTTQueueReturn == pdPASS) {
-            switch(received_msg.tsk_id){
+            switch(tmp_task_id){
                 case READ_ADC_TASK_ID:
                     msg_id = esp_mqtt_client_publish(client, READ_ADC_TOPIC, received_msg.msg, 0, 1, 0);
                     ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);

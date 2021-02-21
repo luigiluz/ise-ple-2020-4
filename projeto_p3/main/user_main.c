@@ -69,13 +69,13 @@ TaskHandle_t xMQTTHandle = NULL;
 void app_main(void)
 {   
     ESP_LOGI(TAG, "Inicio da aplicacao");
-	keypad_init();
-    uart_init();
-    display_message_queue_init();
-    read_adc_init();
-    mqtt_task_message_queue_init();
     display_semph_init();
     mqtt_task_semph_init();
+    display_message_queue_init();
+    mqtt_task_message_queue_init();
+	keypad_init();
+    uart_init();
+    read_adc_init();
 	
     xKeypadReturned = xTaskCreate(keypad_task, "KeypadTask", 1024 + 256, NULL, 1, &xKeypadHandle);
     if (xKeypadReturned == pdPASS) {
@@ -112,7 +112,7 @@ void app_main(void)
         ESP_LOGI(TAG, "ReadAdc nao foi inicializada");
     }
 
-    xMQTTReturned = xTaskCreate(mqtt_task, "MQTT_Task", 2*1024, NULL, 1, &xMQTTHandle);
+    xMQTTReturned = xTaskCreate(mqtt_task, "MQTT_Task", 2*1024 + 256, NULL, 2, &xMQTTHandle);
     if (xMQTTReturned == pdPASS) {
         ESP_LOGI(TAG, "MQTT_Task foi criada com sucesso");
     } else {
