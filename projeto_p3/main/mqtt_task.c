@@ -35,14 +35,25 @@
 
 #include "mqtt_client.h"
 
-#define EXAMPLE_ESP_WIFI_SSID      "Luiz_FixaTurbo"
-#define EXAMPLE_ESP_WIFI_PASS      "luiz19626868"
-#define EXAMPLE_ESP_MAXIMUM_RETRY  5
+static const char *TAG = "MQTT_TASK";
+
+#define ESP_WIFI_SSID               "Luiz_FixaTurbo"
+#define ESP_WIFI_PASS               "luiz19626868"
+#define ESP_MAXIMUM_RETRY           5
 
 #define MQTT_HOST                   "192.168.1.112"
 #define MQTT_PORT                   1883
 
-static const char *TAG = "MQTT_TASK";
+/* The event group allows multiple bits for each event, but we only care about two events:
+ * - we are connected to the AP with an IP
+ * - we failed to connect after the maximum amount of retries */
+#define WIFI_CONNECTED_BIT BIT0
+#define WIFI_FAIL_BIT      BIT1
+
+/* FreeRTOS event group to signal when we are connected*/
+static EventGroupHandle_t s_wifi_event_group;
+
+static int s_retry_num = 0;
 
 static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
 {
@@ -52,17 +63,17 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
     switch (event->event_id) {
         case MQTT_EVENT_CONNECTED:
             ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
-            msg_id = esp_mqtt_client_publish(client, "/topic/qos1", "data_3", 0, 1, 0);
+            msg_id = esp_mqtt_client_publish(client, "/init_topic", "connection stablished", 0, 1, 0);
             ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
 
-            msg_id = esp_mqtt_client_subscribe(client, "/topic/qos0", 0);
-            ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
+            // msg_id = esp_mqtt_client_subscribe(client, "/topic/qos0", 0);
+            // ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
 
-            msg_id = esp_mqtt_client_subscribe(client, "/topic/qos1", 1);
-            ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
+            // msg_id = esp_mqtt_client_subscribe(client, "/topic/qos1", 1);
+            // ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
 
-            msg_id = esp_mqtt_client_unsubscribe(client, "/topic/qos1");
-            ESP_LOGI(TAG, "sent unsubscribe successful, msg_id=%d", msg_id);
+            // msg_id = esp_mqtt_client_unsubscribe(client, "/topic/qos1");
+            // ESP_LOGI(TAG, "sent unsubscribe successful, msg_id=%d", msg_id);
             break;
         case MQTT_EVENT_DISCONNECTED:
             ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
@@ -111,52 +122,13 @@ static void mqtt_app_start(void)
     esp_mqtt_client_start(client);
 }
 
-// void app_main()
-// {
-//     ESP_LOGI(TAG, "[APP] Startup..");
-//     ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
-//     ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
-
-//     esp_log_level_set("*", ESP_LOG_INFO);
-//     esp_log_level_set("MQTT_CLIENT", ESP_LOG_VERBOSE);
-//     esp_log_level_set("MQTT_EXAMPLE", ESP_LOG_VERBOSE);
-//     esp_log_level_set("TRANSPORT_TCP", ESP_LOG_VERBOSE);
-//     esp_log_level_set("TRANSPORT_SSL", ESP_LOG_VERBOSE);
-//     esp_log_level_set("TRANSPORT", ESP_LOG_VERBOSE);
-//     esp_log_level_set("OUTBOX", ESP_LOG_VERBOSE);
-
-//     ESP_ERROR_CHECK(nvs_flash_init());
-//     ESP_ERROR_CHECK(esp_netif_init());
-//     ESP_ERROR_CHECK(esp_event_loop_create_default());
-
-//     /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
-//      * Read "Establishing Wi-Fi or Ethernet Connection" section in
-//      * examples/protocols/README.md for more information about this function.
-//      */
-//     // this needs to be replaced for the default connection
-//     ESP_ERROR_CHECK(example_connect());
-
-//     mqtt_app_start();
-// }
-
-/* FreeRTOS event group to signal when we are connected*/
-static EventGroupHandle_t s_wifi_event_group;
-
-/* The event group allows multiple bits for each event, but we only care about two events:
- * - we are connected to the AP with an IP
- * - we failed to connect after the maximum amount of retries */
-#define WIFI_CONNECTED_BIT BIT0
-#define WIFI_FAIL_BIT      BIT1
-
-static int s_retry_num = 0;
-
 static void event_handler(void* arg, esp_event_base_t event_base,
                                 int32_t event_id, void* event_data)
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-        if (s_retry_num < EXAMPLE_ESP_MAXIMUM_RETRY) {
+        if (s_retry_num < ESP_MAXIMUM_RETRY) {
             esp_wifi_connect();
             s_retry_num++;
             ESP_LOGI(TAG, "retry to connect to the AP");
@@ -189,8 +161,8 @@ void wifi_init_sta(void)
 
     wifi_config_t wifi_config = {
         .sta = {
-            .ssid = EXAMPLE_ESP_WIFI_SSID,
-            .password = EXAMPLE_ESP_WIFI_PASS
+            .ssid = ESP_WIFI_SSID,
+            .password = ESP_WIFI_PASS
         },
     };
 
@@ -220,10 +192,10 @@ void wifi_init_sta(void)
      * happened. */
     if (bits & WIFI_CONNECTED_BIT) {
         ESP_LOGI(TAG, "connected to ap SSID:%s password:%s",
-                 EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
+                 ESP_WIFI_SSID, ESP_WIFI_PASS);
     } else if (bits & WIFI_FAIL_BIT) {
         ESP_LOGI(TAG, "Failed to connect to SSID:%s, password:%s",
-                 EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
+                 ESP_WIFI_SSID, ESP_WIFI_PASS);
     } else {
         ESP_LOGE(TAG, "UNEXPECTED EVENT");
     }
@@ -240,7 +212,6 @@ void mqtt_task(void *pvParameters)
 
     wifi_init_sta();
     mqtt_app_start();
-    // stablish connection with mqtt broker
     // set callback to process subscribed events
     // this callback will only process subscribed events
     // this will come in /msg topic
