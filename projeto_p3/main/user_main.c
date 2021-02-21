@@ -46,18 +46,21 @@ static const char *TAG = "APPLICATION";
 #include "display.h"
 #include "get_from_uart.h"
 #include "read_adc.h"
+#include "mqtt_task.h"
 
 BaseType_t xKeypadReturned;
 BaseType_t xSendToUartReturned;
 BaseType_t xDisplayReturned;
 BaseType_t xGetFromUartReturned;
 BaseType_t xReadAdcReturned;
+BaseType_t xMQTTReturned;
 
 TaskHandle_t xKeypadHandle = NULL;
 TaskHandle_t xSendToUartHandle = NULL;
 TaskHandle_t xDisplayHandle = NULL;
 TaskHandle_t xGetFromUartHandle = NULL;
 TaskHandle_t xReadAdcHandle = NULL;
+TaskHandle_t xMQTTHandle = NULL;
 
 /*
  * @brief: app_main contem o core da aplicacao
@@ -107,6 +110,13 @@ void app_main(void)
         ESP_LOGI(TAG, "ReadAdc foi criada com sucesso");
     } else {
         ESP_LOGI(TAG, "ReadAdc nao foi inicializada");
+    }
+
+    xMQTTReturned = xTaskCreate(mqtt_task, "MQTT_Task", 2*1024, NULL, 1, &xMQTTHandle);
+    if (xMQTTReturned == pdPASS) {
+        ESP_LOGI(TAG, "MQTT_Task foi criada com sucesso");
+    } else {
+        ESP_LOGI(TAG, "MQTT_Task nao foi inicializada");
     }
 
     while(1) {
