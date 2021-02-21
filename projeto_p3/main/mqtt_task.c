@@ -28,6 +28,9 @@
 
 #include "wifi_config.h"
 #include "mqtt_task.h"
+#include "display.h"
+
+#include "jsmn.h"
 
 static const char *TAG = "MQTT_TASK";
 
@@ -37,13 +40,89 @@ static const char *TAG = "MQTT_TASK";
 #define MQTT_INIT_TOPIC             "/mqtt_init_topic"
 #define READ_ADC_TOPIC              "/read_adc"
 #define KEYPAD_TOPIC                "/keypad"
+#define MQTT_TASK_TOPIC             "/mqtt_task"
 
 #define MQTT_INIT_MSG               "Connection stablished"
+
+#define MAX_JSMN_TOKENS 32
+
+/*
+ * Os valores abaixo sao definidos considerando que se espera uma mensagem do seguinte tipo:
+ * {"msg": "mensagem"}
+ */
+#define JSMN_PARSER_EXPECTED_RETURN     3
+#define JSMN_MSG_KEY_INDEX              1
+#define JSMN_MSG_VALUE_INDEX            2
+
+#define MQTT_DISPLAY_MSG_LEN            8
+#define MQTT_DISPLAY_MSG_CURSOR_ROW     0
+#define MQTT_DISPLAY_MSG_CURSOR_COL     0
+
+#define JSMN_MSG_KEY                    "msg"
+#define JSMN_MSG_KEY_LEN                sizeof(JSMN_MSG_KEY) / sizeof(char)
 
 static QueueHandle_t MQTTQueueHandle = NULL;
 static SemaphoreHandle_t MQTTSemphrHandle = NULL;
 
 esp_mqtt_client_handle_t client;
+
+void get_char_key_from_token(char *json_msg, jsmntok_t *token, int token_number, char *key)
+{
+    int key_start = token[token_number].start;
+    int key_end = token[token_number].end;
+    int i;
+    int k;
+
+    for (i = key_start; i < key_end; i++) {
+        k = i - key_start;
+        key[k] = json_msg[i];
+
+        if (k == key_end - 1)
+            key[k + 1] = '\0'; 
+    }
+}
+
+int parse_json_to_display_msg(char *temp, jsmntok_t *token, display_msg_t *display_msg)
+{
+    int msg_key_ret;
+    int ret;
+    char msg_value[MQTT_DISPLAY_MSG_LEN];
+    char msg_key[JSMN_MSG_KEY_LEN + 1];
+
+    memset(msg_key, '\0', JSMN_MSG_KEY_LEN + 1);
+    memset(msg_value, '\0', MQTT_DISPLAY_MSG_LEN);
+
+    get_char_key_from_token(temp, token, JSMN_MSG_KEY_INDEX, msg_key);
+    msg_key_ret = strncmp(msg_key, JSMN_MSG_KEY, JSMN_MSG_KEY_LEN + 1);
+    if (msg_key_ret != 0) {
+        ret = -2;
+        return ret;
+    }
+    ESP_LOGI(TAG, "msg_key_ret: %d", msg_key_ret);
+    get_char_key_from_token(temp, token, JSMN_MSG_VALUE_INDEX, msg_value);
+
+    strncpy(display_msg->msg, msg_value, MQTT_DISPLAY_MSG_LEN);
+    ESP_LOGI(TAG, "msg_value: %s", msg_value);
+    ESP_LOGI(TAG, "msg: %s", display_msg->msg);
+
+    ret = 0;
+
+    return ret;
+}
+
+int build_mqtt_display_msg(char *temp, jsmntok_t *token, display_msg_t *display_msg)
+{
+    int ret;
+
+    display_msg->tsk_id = MQTT_TASK_ID;
+    display_msg->cursor_row = MQTT_DISPLAY_MSG_CURSOR_ROW;
+    display_msg->cursor_col = MQTT_DISPLAY_MSG_CURSOR_COL;
+    display_msg->msg_len = MQTT_DISPLAY_MSG_LEN;
+
+    ret = parse_json_to_display_msg(temp, token, display_msg);
+
+    return ret;
+}
 
 void mqtt_task_semph_init(void)
 {
@@ -106,10 +185,35 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
             ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
             break;
 
-        case MQTT_EVENT_SUBSCRIBED:
-            ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
-            // msg_id = esp_mqtt_client_publish(client, "/topic/qos0", "data", 0, 0, 0);
-            // ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
+        case MQTT_EVENT_SUBSCRIBED: {
+                display_msg_t display_msg;
+                jsmntok_t token[MAX_JSMN_TOKENS];
+                jsmn_parser parser;
+                int ret;
+
+                ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
+                msg_id = esp_mqtt_client_subscribe(tmp_client, MQTT_TASK_TOPIC, 1);
+
+                jsmn_init(&parser);
+                ret = jsmn_parse(&parser, event->data, strlen(event->data), token, MAX_JSMN_TOKENS);
+
+                if (ret != JSMN_PARSER_EXPECTED_RETURN)
+                    ESP_LOGI(TAG, "Mensagem com formato invalido");
+                
+                if (ret == JSMN_PARSER_EXPECTED_RETURN) {
+                    ESP_LOGI(TAG, "json com tamanho correto");
+                    ret = build_mqtt_display_msg(event->data, token, &display_msg);
+
+                    if (ret == 0) {
+                        BaseType_t DisplaySendReturn = display_append_to_message_queue(&display_msg);
+                        if (DisplaySendReturn != pdTRUE) {
+                            ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila do display");
+                        }
+                    }	
+                } else {
+                    ESP_LOGI(TAG, "Mensagem no formato invalido");
+                }
+            }
             break;
         // case MQTT_EVENT_UNSUBSCRIBED:
         //     ESP_LOGI(TAG, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
