@@ -73,9 +73,9 @@ void app_main(void)
     uart_init();
     display_message_queue_init();
     read_adc_init();
-    send_to_uart_message_queue_init();
+    mqtt_task_message_queue_init();
     display_semph_init();
-    send_to_uart_semph_init();
+    mqtt_task_semph_init();
 	
     xKeypadReturned = xTaskCreate(keypad_task, "KeypadTask", 1024 + 256, NULL, 1, &xKeypadHandle);
     if (xKeypadReturned == pdPASS) {
@@ -84,12 +84,12 @@ void app_main(void)
         ESP_LOGI(TAG, "KeypadTask nao foi inicializada");
     }
     
-    xSendToUartReturned = xTaskCreate(send_to_uart_task, "SendToUartTask", 1024, NULL, 2, &xSendToUartHandle);
-    if (xSendToUartReturned == pdPASS) {
-        ESP_LOGI(TAG, "SendToUartTask foi criada com sucesso");
-    } else {
-        ESP_LOGI(TAG, "SendToUartTask nao foi inicializada");
-    }
+    // xSendToUartReturned = xTaskCreate(send_to_uart_task, "SendToUartTask", 1024, NULL, 2, &xSendToUartHandle);
+    // if (xSendToUartReturned == pdPASS) {
+    //     ESP_LOGI(TAG, "SendToUartTask foi criada com sucesso");
+    // } else {
+    //     ESP_LOGI(TAG, "SendToUartTask nao foi inicializada");
+    // }
 
     xDisplayReturned = xTaskCreate(display_task, "DisplayTask", 2*1024 + 256, NULL, 1, &xDisplayHandle);
     if (xDisplayReturned == pdPASS) {
@@ -98,12 +98,12 @@ void app_main(void)
         ESP_LOGI(TAG, "DisplayTask nao foi inicializada");
     }
 
-    xGetFromUartReturned = xTaskCreate(get_from_uart_task, "GetFromUartTask", 2*1024, NULL, 1, &xDisplayHandle);
-    if (xGetFromUartReturned == pdPASS) {
-        ESP_LOGI(TAG, "GetFromUart foi criada com sucesso");
-    } else {
-        ESP_LOGI(TAG, "GetFromUart nao foi inicializada");
-    }
+    // xGetFromUartReturned = xTaskCreate(get_from_uart_task, "GetFromUartTask", 2*1024, NULL, 1, &xDisplayHandle);
+    // if (xGetFromUartReturned == pdPASS) {
+    //     ESP_LOGI(TAG, "GetFromUart foi criada com sucesso");
+    // } else {
+    //     ESP_LOGI(TAG, "GetFromUart nao foi inicializada");
+    // }
 
     xReadAdcReturned = xTaskCreate(read_adc_task, "ReadAdcTask", 1024, NULL, 2, &xReadAdcHandle);
     if (xReadAdcReturned == pdPASS) {

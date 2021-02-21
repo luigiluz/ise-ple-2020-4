@@ -27,21 +27,70 @@
 #include "mqtt_client.h"
 
 #include "wifi_config.h"
+#include "mqtt_task.h"
 
 static const char *TAG = "MQTT_TASK";
 
 #define MQTT_HOST                   "192.168.1.112"
 #define MQTT_PORT                   1883
 
+#define MQTT_INIT_TOPIC             "/mqtt_init_topic"
+#define READ_ADC_TOPIC              "/read_adc"
+#define KEYPAD_TOPIC                "/keypad"
+
+#define MQTT_INIT_MSG               "Connection stablished"
+
+static QueueHandle_t MQTTQueueHandle = NULL;
+static SemaphoreHandle_t MQTTSemphrHandle = NULL;
+
+esp_mqtt_client_handle_t client;
+
+void mqtt_task_semph_init(void)
+{
+    if (MQTTSemphrHandle == NULL)
+        MQTTSemphrHandle = xSemaphoreCreateMutex();
+}
+
+void mqtt_semphr_take(void)
+{
+    xSemaphoreTake(MQTTSemphrHandle, portMAX_DELAY);
+}
+
+void mqtt_semphr_give(void)
+{
+    xSemaphoreGive(MQTTSemphrHandle);
+}
+
+void mqtt_task_message_queue_init(void)
+{
+	if (MQTTQueueHandle == NULL)
+		MQTTQueueHandle = xQueueCreate(10, sizeof(mqtt_msg_t));
+};
+
+BaseType_t mqtt_task_append_to_message_queue(mqtt_msg_t *msg)
+{
+	BaseType_t MQTTQueueReturn = errQUEUE_FULL;
+
+    mqtt_semphr_take();
+
+    if (MQTTQueueHandle != NULL) {
+        MQTTQueueReturn = xQueueSend(MQTTQueueHandle, (void *)msg, portMAX_DELAY);
+    }
+
+    mqtt_semphr_give();
+
+    return MQTTQueueReturn;
+}
+
 static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
 {
-    esp_mqtt_client_handle_t client = event->client;
+    esp_mqtt_client_handle_t tmp_client = event->client;
     int msg_id;
     // your_context_t *context = event->context;
     switch (event->event_id) {
         case MQTT_EVENT_CONNECTED:
             ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
-            msg_id = esp_mqtt_client_publish(client, "/init_topic", "connection stablished", 0, 1, 0);
+            msg_id = esp_mqtt_client_publish(tmp_client, MQTT_INIT_TOPIC, MQTT_INIT_MSG, 0, 1, 0);
             ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
 
             // msg_id = esp_mqtt_client_subscribe(client, "/topic/qos0", 0);
@@ -95,7 +144,7 @@ static void mqtt_app_start(void)
         .port = MQTT_PORT,
     };
 
-    esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
+    client = esp_mqtt_client_init(&mqtt_cfg);
     esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, client);
     esp_mqtt_client_start(client);
 }
@@ -112,14 +161,31 @@ void mqtt_task(void *pvParameters)
     // this will come in /msg topic
 
     while(1) {
-        // wait for events to come from read_adc task
-        // publish the received events
-        // these events will be published in /read_adc topic
-        // the msg will be a json string in the format {"ADC" : value, "ts": ts_value}
+        int msg_id;
 
-        // wait for events to come from keypad task
-        // publish the received events
-        // these events will be published in /keypad topic
-        // the msg will be a json string in the format {"key_1": key_val, "key_2": key_val, "key_3": key_val, "key_4": key_val}
+        BaseType_t MQTTQueueReturn;
+        mqtt_msg_t received_msg;
+
+        MQTTQueueReturn = xQueueReceive(MQTTQueueHandle, (void *)&received_msg, portMAX_DELAY);
+
+        if (MQTTQueueReturn == pdPASS) {
+            switch(received_msg.tsk_id){
+                case READ_ADC_TASK_ID:
+                    msg_id = esp_mqtt_client_publish(client, READ_ADC_TOPIC, received_msg.msg, 0, 1, 0);
+                    ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
+                break;
+
+                case KEYPAD_TASK_ID:
+                    msg_id = esp_mqtt_client_publish(client, KEYPAD_TOPIC, received_msg.msg, 0, 1, 0);
+                    ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
+                break;
+
+                default:
+                ESP_LOGI(TAG, "Unknown task id");
+                break;
+            }
+        }
+        
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }

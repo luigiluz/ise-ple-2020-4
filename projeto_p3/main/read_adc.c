@@ -11,7 +11,7 @@
 #include "esp_log.h"
 
 #include "display.h"
-#include "send_to_uart.h"
+#include "mqtt_task.h"
 
 static const char *TAG = "READ_ADC";
 
@@ -59,17 +59,18 @@ void hw_timer_callback(void *arg)
     timer_flag = 1;
 }
 
-uart_msg_t build_adc_uart_msg(uint16_t adc_value)
+mqtt_msg_t build_adc_mqtt_msg(uint16_t adc_value)
 {
-    uart_msg_t uart_msg;
+    mqtt_msg_t mqtt_msg;
     static char adc_json_msg[19];
 
     sprintf(adc_json_msg, "{ \"ADC\": \"0x%02X\" }\n", adc_value & 0xFF);
     
-    uart_msg.msg = adc_json_msg;
-    uart_msg.msg_len = sizeof(adc_json_msg) / sizeof(adc_json_msg[0]);
+    mqtt_msg.tsk_id = READ_ADC_TASK_ID;
+    mqtt_msg.msg = adc_json_msg;
+    mqtt_msg.msg_len = sizeof(adc_json_msg) / sizeof(adc_json_msg[0]);
 
-    return uart_msg;
+    return mqtt_msg;
 }
 
 display_msg_t build_adc_display_msg(uint32_t adc_value)
@@ -94,7 +95,7 @@ void read_adc_task()
     uint32_t mean_adc_value;
     static int i = 0;
     display_msg_t display_msg;
-    uart_msg_t uart_msg;
+    mqtt_msg_t mqtt_msg;
 
     ESP_LOGI(TAG, "Initialize hw_timer for callback");
     hw_timer_init(hw_timer_callback, NULL);
@@ -120,11 +121,11 @@ void read_adc_task()
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila do display");
             }
 
-            uart_msg = build_adc_uart_msg(mean_adc_value);
+            mqtt_msg = build_adc_mqtt_msg(mean_adc_value);
 
-            BaseType_t SendToUartReturn = send_to_uart_append_to_message_queue(&uart_msg);
-            if (SendToUartReturn != pdTRUE) {
-                ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila da uart");
+            BaseType_t MQTTReturn = mqtt_task_append_to_message_queue(&mqtt_msg);
+            if (MQTTReturn != pdTRUE) {
+                ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila do mqtt");
             }
 
             i = 0;

@@ -14,7 +14,7 @@
 
 #include "keypad.h"
 #include "display.h"
-#include "send_to_uart.h"
+#include "mqtt_task.h"
 
 static const char *TAG = "KEYPAD";
 
@@ -174,19 +174,20 @@ char get_key_from_keypad(char read_columns[KEYPAD_COLS])
 	return pressed_key;
 }
 
-uart_msg_t build_keypad_uart_msg(char *keys_buffer)
+mqtt_msg_t build_keypad_mqtt_msg(char *keys_buffer)
 {
-	uart_msg_t uart_msg;
+	mqtt_msg_t mqtt_msg;
 	static char keypad_json_msg[60];
 
 	sprintf(keypad_json_msg,
 		"{ \"key_0\": \"%c\", \"key_1\": \"%c\", \"key_2\": \"%c\", \"key_3\": \"%c\" }\n",
 		keys_buffer[0], keys_buffer[1], keys_buffer[2], keys_buffer[3]);
 	
-	uart_msg.msg = keypad_json_msg;
-	uart_msg.msg_len = sizeof(keypad_json_msg) / sizeof(keypad_json_msg[0]);
+	mqtt_msg.tsk_id = KEYPAD_TASK_ID;
+	mqtt_msg.msg = keypad_json_msg;
+	mqtt_msg.msg_len = sizeof(keypad_json_msg) / sizeof(keypad_json_msg[0]);
 
-	return uart_msg;
+	return mqtt_msg;
 }
 
 display_msg_t build_keypad_display_msg(char *keys_buffer)
@@ -218,7 +219,7 @@ void keypad_task(void *pvParameters)
     	int output_sequence;
    		int i;
 		static int buffer_index = 0;
-		uart_msg_t uart_msg;
+		mqtt_msg_t mqtt_msg;
 
 		vTaskDelay(600 / portTICK_RATE_MS);
 	
@@ -251,11 +252,11 @@ void keypad_task(void *pvParameters)
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila do display");
             }
 
-			uart_msg = build_keypad_uart_msg(keys_buffer);
+			mqtt_msg = build_keypad_mqtt_msg(keys_buffer);
 
-			BaseType_t SendToUartReturn = send_to_uart_append_to_message_queue(&uart_msg);
-            if (SendToUartReturn != pdTRUE) {
-                ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila da uart");
+			BaseType_t MQTTReturn = mqtt_task_append_to_message_queue(&mqtt_msg);
+            if (MQTTReturn != pdTRUE) {
+                ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila do mqtt");
             }
 
 			buffer_index = 0;
