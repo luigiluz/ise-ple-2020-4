@@ -17,7 +17,7 @@ static const char *TAG = "READ_ADC";
 
 #define ADC_BUFFER_SIZE             4
 
-#define ADC_SAMPLING_TIME           2000 /* In useg */
+#define ADC_SAMPLING_TIME           200000 /* In useg */
 
 #define ADC_DISPLAY_MSG_CURSOR_ROW  1 
 #define ADC_DISPLAY_MSG_CURSOR_COL  0
@@ -59,12 +59,12 @@ void hw_timer_callback(void *arg)
     timer_flag = 1;
 }
 
-mqtt_msg_t build_adc_mqtt_msg(uint16_t adc_value)
+mqtt_msg_t build_adc_mqtt_msg(uint16_t adc_value, uint32_t timestamp)
 {
     mqtt_msg_t mqtt_msg;
-    static char adc_json_msg[19];
+    static char adc_json_msg[41];
 
-    sprintf(adc_json_msg, "{ \"ADC\": \"0x%02X\" }\n", adc_value & 0xFF);
+    sprintf(adc_json_msg, "{ \"ADC\": \"%d\", \"ts\": \"%d\" }\n", adc_value, timestamp);
     
     mqtt_msg.tsk_id = READ_ADC_TASK_ID;
     mqtt_msg.msg = adc_json_msg;
@@ -96,6 +96,7 @@ void read_adc_task()
     static int i = 0;
     display_msg_t display_msg;
     mqtt_msg_t mqtt_msg;
+    static uint32_t timestamp = 0;
 
     ESP_LOGI(TAG, "Initialize hw_timer for callback");
     hw_timer_init(hw_timer_callback, NULL);
@@ -112,6 +113,7 @@ void read_adc_task()
         }
 
         if (i == ADC_BUFFER_SIZE) {
+            timestamp = timestamp + 1;
             mean_adc_value = get_mean_adc_value(adc_data);
             mean_adc_value = convert_adc_value(mean_adc_value);
 
@@ -121,7 +123,7 @@ void read_adc_task()
                 ESP_LOGI(TAG, "Falha ao enviar a mensagem pela fila do display");
             }
 
-            mqtt_msg = build_adc_mqtt_msg(mean_adc_value);
+            mqtt_msg = build_adc_mqtt_msg(mean_adc_value, timestamp);
 
             BaseType_t MQTTReturn = mqtt_task_append_to_message_queue(&mqtt_msg);
             if (MQTTReturn != pdTRUE) {
