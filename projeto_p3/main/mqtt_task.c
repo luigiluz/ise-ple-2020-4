@@ -32,6 +32,8 @@
 
 #include "jsmn.h"
 
+#include "driver/gpio.h"
+
 static const char *TAG = "MQTT_TASK";
 
 #define MQTT_HOST                   "192.168.1.112"
@@ -45,6 +47,9 @@ static const char *TAG = "MQTT_TASK";
 #define MQTT_INIT_MSG               "Connection stablished"
 
 #define MAX_JSMN_TOKENS 32
+
+#define GPIO_OUTPUT_IO_0    15
+#define GPIO_OUTPUT_PIN_SEL  ((1ULL<<GPIO_OUTPUT_IO_0))
 
 /*
  * Os valores abaixo sao definidos considerando que se espera uma mensagem do seguinte tipo:
@@ -67,6 +72,19 @@ static QueueHandle_t MQTTQueueHandle = NULL;
 static SemaphoreHandle_t MQTTSemphrHandle = NULL;
 
 esp_mqtt_client_handle_t client;
+
+void init_mqtt_gpio(void)
+{
+    /* Configura os pinos GPIO de saida */
+    ESP_LOGI(TAG, "Configurando pinos GPIO");
+    gpio_config_t io_conf;
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    io_conf.mode = GPIO_MODE_OUTPUT;
+    io_conf.pin_bit_mask = GPIO_OUTPUT_PIN_SEL;
+    io_conf.pull_down_en = 0;
+    io_conf.pull_up_en = 0;
+    gpio_config(&io_conf);
+}
 
 void get_char_key_from_token(char *json_msg, jsmntok_t *token, int token_number, char *key)
 {
@@ -179,6 +197,8 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
             break;
 
         case MQTT_EVENT_DATA: {
+            gpio_set_level(GPIO_OUTPUT_IO_0, 1);
+            
             ESP_LOGI(TAG, "MQTT_EVENT_DATA");
             display_msg_t display_msg;
             jsmntok_t token[MAX_JSMN_TOKENS];
@@ -213,6 +233,9 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
             }
             printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
             printf("DATA=%.*s\r\n", event->data_len, event->data);
+
+            vTaskDelay(250);
+            gpio_set_level(GPIO_OUTPUT_IO_0, 0);
         }
             break;
         
@@ -255,6 +278,8 @@ void mqtt_task(void *pvParameters)
 
     wifi_config_init();
     mqtt_app_start();
+    init_mqtt_gpio();
+    gpio_set_level(GPIO_OUTPUT_IO_0, 0);
 
     while(1) {
         int msg_id;
