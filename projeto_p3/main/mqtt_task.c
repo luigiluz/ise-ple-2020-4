@@ -201,12 +201,19 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
         case MQTT_EVENT_DATA: {
             ESP_LOGI(TAG, "MQTT_EVENT_DATA");
             ESP_LOGI(TAG, "event->data: %s", event->data);
+            ESP_LOGI(TAG, "event->data_len: %d", event->data_len);
             display_msg_t display_msg;
             jsmntok_t token[MAX_JSMN_TOKENS];
             jsmn_parser parser;
             int ret;
-            static char tmp_event_data[] = {};
+            static char tmp_event_data[40];
+            // static char tmp_event_data[] = {};
             jsmn_init(&parser);
+
+            if (event->data_len > 40) {
+                ESP_LOGI(TAG, "Tamanho da mensagem maior do que o esperado");
+                break; 
+            }
 
             strncpy(tmp_event_data, event->data, event->data_len);
             tmp_event_data[event->data_len] = '\0';
@@ -225,8 +232,8 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
                     }
                 }	
             }
-            // printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
-            // printf("DATA=%.*s\r\n", event->data_len, event->data);
+            printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
+            printf("DATA=%.*s\r\n", event->data_len, event->data);
         }
             break;
         case MQTT_EVENT_ERROR:
