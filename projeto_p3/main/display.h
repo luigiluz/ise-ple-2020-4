@@ -5,10 +5,8 @@
 
 enum task_id {
     DISPLAY_TASK_ID = 0,
-    GET_FROM_UART_TASK_ID,
     KEYPAD_TASK_ID,
     READ_ADC_TASK_ID,
-    SEND_TO_UART_TASK_ID,
     MQTT_TASK_ID
 };
 
