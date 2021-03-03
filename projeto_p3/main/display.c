@@ -61,26 +61,26 @@ BaseType_t display_append_to_message_queue(display_msg_t *display_msg)
 void update_display(display_msg_t display_msg)
 {
     static uint8_t curr_msg_len, prev_msg_len;
-    static uint8_t uart_msg_len, prev_uart_msg_len;
+    static uint8_t mqtt_msg_len, prev_mqtt_msg_len;
     static uint8_t adc_msg_len, prev_adc_msg_len;
     static uint8_t update_flag;
     uint8_t k;
 
-    uart_msg_len = 1;
+    mqtt_msg_len = 1;
     adc_msg_len = 1;
 
     update_flag = 0;
     
     switch(display_msg.tsk_id) {
-    case GET_FROM_UART_TASK_ID:
+    case MQTT_TASK_ID:
         for (k = 0; k < display_msg.msg_len; k++) {
             if (display_msg.msg[k] == '\0')
                 break;
-            uart_msg_len++;
+            mqtt_msg_len++;
         }
-        curr_msg_len = uart_msg_len;
-        prev_msg_len = prev_uart_msg_len;
-        prev_uart_msg_len = uart_msg_len;
+        curr_msg_len = mqtt_msg_len;
+        prev_msg_len = prev_mqtt_msg_len;
+        prev_mqtt_msg_len = mqtt_msg_len;
         update_flag = 1;
         break;
 
