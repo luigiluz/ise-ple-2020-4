@@ -58,6 +58,8 @@ static const char *TAG = "MQTT_TASK";
 #define MQTT_DISPLAY_MSG_CURSOR_ROW     0
 #define MQTT_DISPLAY_MSG_CURSOR_COL     0
 
+#define MQTT_SUBSCRIBE_MSG_MAX_LEN      40
+
 #define JSMN_MSG_KEY                    "msg"
 #define JSMN_MSG_KEY_LEN                sizeof(JSMN_MSG_KEY) / sizeof(char)
 
@@ -174,43 +176,19 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
 
             msg_id = esp_mqtt_client_subscribe(tmp_client, MQTT_TASK_TOPIC, 0);
             ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", msg_id);
-
-            // msg_id = esp_mqtt_client_subscribe(client, "/topic/qos0", 0);
-            // ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
-
-            // msg_id = esp_mqtt_client_subscribe(client, "/topic/qos1", 1);
-            // ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
-
-            // msg_id = esp_mqtt_client_unsubscribe(client, "/topic/qos1");
-            // ESP_LOGI(TAG, "sent unsubscribe successful, msg_id=%d", msg_id);
-            break;
-        case MQTT_EVENT_DISCONNECTED:
-            ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
             break;
 
-        case MQTT_EVENT_SUBSCRIBED: {
-            ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED");
-            }
-            break;
-        // case MQTT_EVENT_UNSUBSCRIBED:
-        //     ESP_LOGI(TAG, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
-        //     break;
-        // case MQTT_EVENT_PUBLISHED:
-        //     ESP_LOGI(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
-        //     break; 
         case MQTT_EVENT_DATA: {
             ESP_LOGI(TAG, "MQTT_EVENT_DATA");
-            ESP_LOGI(TAG, "event->data: %s", event->data);
-            ESP_LOGI(TAG, "event->data_len: %d", event->data_len);
             display_msg_t display_msg;
             jsmntok_t token[MAX_JSMN_TOKENS];
             jsmn_parser parser;
             int ret;
-            static char tmp_event_data[40];
-            // static char tmp_event_data[] = {};
+            static char tmp_event_data[MQTT_SUBSCRIBE_MSG_MAX_LEN];
+
             jsmn_init(&parser);
 
-            if (event->data_len > 40) {
+            if (event->data_len > MQTT_SUBSCRIBE_MSG_MAX_LEN) {
                 ESP_LOGI(TAG, "Tamanho da mensagem maior do que o esperado");
                 break; 
             }
@@ -218,6 +196,7 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
             strncpy(tmp_event_data, event->data, event->data_len);
             tmp_event_data[event->data_len] = '\0';
             ESP_LOGI(TAG, "received_msg: %s", tmp_event_data);
+
             ret = jsmn_parse(&parser, tmp_event_data, strlen(tmp_event_data), token, MAX_JSMN_TOKENS);
             if (ret != JSMN_PARSER_EXPECTED_RETURN)
                 ESP_LOGI(TAG, "Mensagem com formato invalido");
@@ -236,9 +215,15 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
             printf("DATA=%.*s\r\n", event->data_len, event->data);
         }
             break;
+        
         case MQTT_EVENT_ERROR:
             ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
             break;
+
+        case MQTT_EVENT_DISCONNECTED:
+        case MQTT_EVENT_SUBSCRIBED:
+        case MQTT_EVENT_UNSUBSCRIBED:
+        case MQTT_EVENT_PUBLISHED:
         default:
             ESP_LOGI(TAG, "Other event id:%d", event->event_id);
             break;
