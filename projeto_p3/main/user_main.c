@@ -15,23 +15,17 @@ static const char *TAG = "APPLICATION";
 #include "esp_system.h"
 
 #include "keypad.h"
-#include "send_to_uart.h"
 #include "display.h"
-#include "get_from_uart.h"
 #include "read_adc.h"
 #include "mqtt_task.h"
 
 BaseType_t xKeypadReturned;
-BaseType_t xSendToUartReturned;
 BaseType_t xDisplayReturned;
-BaseType_t xGetFromUartReturned;
 BaseType_t xReadAdcReturned;
 BaseType_t xMQTTReturned;
 
 TaskHandle_t xKeypadHandle = NULL;
-TaskHandle_t xSendToUartHandle = NULL;
 TaskHandle_t xDisplayHandle = NULL;
-TaskHandle_t xGetFromUartHandle = NULL;
 TaskHandle_t xReadAdcHandle = NULL;
 TaskHandle_t xMQTTHandle = NULL;
 
@@ -47,7 +41,6 @@ void app_main(void)
     display_message_queue_init();
     mqtt_task_message_queue_init();
 	keypad_init();
-    uart_init();
     read_adc_init();
 	
     xKeypadReturned = xTaskCreate(keypad_task, "KeypadTask", 1024 + 256, NULL, 1, &xKeypadHandle);
