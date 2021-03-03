@@ -1,30 +1,3 @@
-/* Projeto envolvendo comunicacao serial 
- * Data: 23/01/2020
- * Autor: Luigi Luz
- */
-
-/* Arquitetura do sistema
- * O sistema ira possuir 4 tarefas que sao:
- * - DisplayTask
- *   Objetivo: 
- *             Apresentar no display as informacoes recebidas
- *
- * - KeyboardTask
- *   Objetivo: 
- *             Ler as informacoes digitadas no teclado
- *
- * - GetUartTask
- *   Objetivo: 
- *             Processar as informacoes recebidas pela UART
- *             Recuperar a informacao formata em formato JSON
- *             Enviar a informacao para o display
- *
- * - SendUartTask
- *   Objetivo: 
- *             Construir mensagem em formato JSON com os dados do keypad
- *             Enviar a mensagem via UART
- */
-
 static const char *TAG = "APPLICATION";
 
 #include <stdio.h>
@@ -83,13 +56,6 @@ void app_main(void)
     } else {
         ESP_LOGI(TAG, "KeypadTask nao foi inicializada");
     }
-    
-    // xSendToUartReturned = xTaskCreate(send_to_uart_task, "SendToUartTask", 1024, NULL, 2, &xSendToUartHandle);
-    // if (xSendToUartReturned == pdPASS) {
-    //     ESP_LOGI(TAG, "SendToUartTask foi criada com sucesso");
-    // } else {
-    //     ESP_LOGI(TAG, "SendToUartTask nao foi inicializada");
-    // }
 
     xDisplayReturned = xTaskCreate(display_task, "DisplayTask", 2*1024 + 256, NULL, 1, &xDisplayHandle);
     if (xDisplayReturned == pdPASS) {
@@ -97,13 +63,6 @@ void app_main(void)
     } else {
         ESP_LOGI(TAG, "DisplayTask nao foi inicializada");
     }
-
-    // xGetFromUartReturned = xTaskCreate(get_from_uart_task, "GetFromUartTask", 2*1024, NULL, 1, &xDisplayHandle);
-    // if (xGetFromUartReturned == pdPASS) {
-    //     ESP_LOGI(TAG, "GetFromUart foi criada com sucesso");
-    // } else {
-    //     ESP_LOGI(TAG, "GetFromUart nao foi inicializada");
-    // }
 
     xReadAdcReturned = xTaskCreate(read_adc_task, "ReadAdcTask", 1024, NULL, 2, &xReadAdcHandle);
     if (xReadAdcReturned == pdPASS) {
